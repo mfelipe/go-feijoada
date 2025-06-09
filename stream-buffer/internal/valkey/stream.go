@@ -2,7 +2,6 @@ package valkey
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/valkey-io/valkey-go"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
 
+//goland:noinspection GoExportedFuncWithUnexportedType
 func New(serverCfg config.Server, streamCfg config.Stream) *stream {
 	opts := valkey.MustParseURL(serverCfg.Address)
 	opts.Username = serverCfg.Username
@@ -38,7 +38,7 @@ type stream struct {
 }
 
 func (s *stream) Add(ctx context.Context, message models.Message) error {
-	return s.client.Do(ctx, s.client.B().Xadd().Key(s.cfg.Name).Nomkstream().Id("*").FieldValue().FieldValue(models.DataFieldName, string(message.Data)).FieldValue(models.SchemaFieldName, message.SchemaURI).Build()).Error()
+	return s.client.Do(ctx, s.client.B().Xadd().Key(s.cfg.Name).Nomkstream().Id("*").FieldValue().FieldValueIter(message.Iter()).Build()).Error()
 }
 
 func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, error) {
@@ -53,12 +53,9 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 	}
 
 	messageMap := make(map[string]models.Message)
-	for _, entriesMap := range entriesArrayMap {
-		for _, message := range entriesMap {
-			messageMap[message.ID] = models.Message{
-				SchemaURI: message.FieldValues[models.SchemaFieldName],
-				Data:      json.RawMessage(message.FieldValues[models.DataFieldName]),
-			}
+	for _, entries := range entriesArrayMap {
+		for _, entry := range entries {
+			messageMap[entry.ID] = models.MessageFromMap(entry.FieldValues)
 		}
 	}
 

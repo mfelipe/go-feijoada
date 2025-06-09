@@ -1,52 +1,39 @@
 package config
 
 import (
-	"log"
-	"strings"
+	"path/filepath"
 	"time"
 
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
-
+	svcfg "github.com/mfelipe/go-feijoada/schema-validator/config"
 	sbcfg "github.com/mfelipe/go-feijoada/stream-buffer/config"
+	utilscfg "github.com/mfelipe/go-feijoada/utils/config"
+	utilslog "github.com/mfelipe/go-feijoada/utils/log"
 )
 
 const (
-	delim  = "."
-	prefix = "kc_"
+	Prefix = "KC"
 )
 
-func Load() Consumer {
-	k := koanf.New(".")
-
-	// Load YAML config.
-	if err := k.Load(file.Provider("base.yaml"), yaml.Parser()); err != nil {
-		log.Fatalf("error loading base yaml config: %v", err)
-	}
-
-	err := k.Load(env.Provider(prefix, delim, func(s string) string {
-		return strings.Replace(strings.TrimPrefix(s, prefix), "_", delim, -1)
-	}), nil)
+func Load() *Consumer {
+	path, err := filepath.Abs("../config/base.yaml")
 	if err != nil {
-		log.Fatalf("error loading config from environment variables: %v", err)
+		panic(err)
 	}
+	var cfg Consumer
+	utilscfg.Load[Consumer](Prefix, path, &cfg)
 
-	var c Consumer
-	if err = k.Unmarshal("kc", &c); err != nil {
-		log.Fatalf("error unmarshalling loaded configuration: %v", err)
-	}
-
-	return c
+	return &cfg
 }
 
 type Consumer struct {
-	Kafka                       Kafka         `json:"kafka" koanf:"kafka,required"`
-	Stream                      sbcfg.Config  `json:"stream" koanf:"stream,required"`
-	MaxProcessRoutines          int           `json:"maxProcessRoutines" koanf:"maxProcessRoutines,required,gte=10"`
-	PartitionRecordsChannelSize int           `json:"partitionRecordsChannelSize" koanf:"partitionRecordsChannelSize,required,gte=5"`
-	CloseTimeout                time.Duration `json:"closeTimeout" koanf:"closeTimeout,required"`
+	Log                         utilslog.Config `json:"log" koanf:"log"`
+	SchemaValidator             svcfg.Config    `json:"schemaValidator" koanf:"schemaValidator,required"`
+	Kafka                       Kafka           `json:"kafka" koanf:"kafka,required"`
+	Stream                      sbcfg.Config    `json:"stream" koanf:"stream,required"`
+	MaxProcessRoutines          int             `json:"maxProcessRoutines" koanf:"maxProcessRoutines,required,gt=0"`
+	MaxPoolRecords              int             `json:"maxPoolRecords" koanf:"maxPoolRecords,required,gt=0"`
+	PartitionRecordsChannelSize int             `json:"partitionRecordsChannelSize" koanf:"partitionRecordsChannelSize,required,gte=5"`
+	CloseTimeout                time.Duration   `json:"closeTimeout" koanf:"closeTimeout,required"`
 }
 
 type Kafka struct {

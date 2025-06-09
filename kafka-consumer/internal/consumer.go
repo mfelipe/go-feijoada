@@ -2,15 +2,18 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	zlog "github.com/rs/zerolog/log"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mfelipe/go-feijoada/kafka-consumer/config"
+	schemavalidator "github.com/mfelipe/go-feijoada/schema-validator"
 	streambuffer "github.com/mfelipe/go-feijoada/stream-buffer"
 	sbmodels "github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
@@ -20,6 +23,7 @@ import (
 
 type pconsumer struct {
 	stream    streambuffer.Stream
+	validator schemavalidator.SchemaValidator
 	kcli      *kgo.Client
 	topic     string
 	partition int32
@@ -37,14 +41,16 @@ type consumerKey struct {
 type Consumer struct {
 	cfg       config.Consumer
 	stream    streambuffer.Stream
+	validator schemavalidator.SchemaValidator
 	kcli      *kgo.Client
 	consumers map[consumerKey]*pconsumer
 }
 
 func NewConsumer(cfg config.Consumer) *Consumer {
 	c := &Consumer{
-		cfg:    cfg,
-		stream: streambuffer.New(cfg.Stream),
+		cfg:       cfg,
+		stream:    streambuffer.New(cfg.Stream),
+		validator: schemavalidator.New(cfg.SchemaValidator),
 	}
 
 	client, err := kgo.NewClient(
@@ -70,7 +76,7 @@ func NewConsumer(cfg config.Consumer) *Consumer {
 	return c
 }
 
-func (pc *pconsumer) consume() {
+func (pc *pconsumer) consume(_ context.Context) {
 	defer close(pc.done)
 	fmt.Printf("Starting consume for topic %s and partition %d\n", pc.topic, pc.partition)
 	defer fmt.Printf("Closing consume for topic %s and partition %d\n", pc.topic, pc.partition)
@@ -80,9 +86,12 @@ func (pc *pconsumer) consume() {
 			return
 		case recs := <-pc.records:
 			ctx := context.Background()
-			pc.addToStream(ctx, recs)
+			err := pc.addToStream(ctx, recs)
+			if err != nil {
+				return
+			}
 			fmt.Printf("Some sort of work done, about to commit on topic %s and partition %d\n", pc.topic, pc.partition)
-			err := pc.kcli.CommitRecords(ctx, recs...)
+			err = pc.kcli.CommitRecords(ctx, recs...)
 			if err != nil {
 				fmt.Printf("Error when committing offsets to kafka err: %v topic: %s partition: %d offset %d\n", err, pc.topic, pc.partition, recs[len(recs)-1].Offset+1)
 			}
@@ -90,35 +99,59 @@ func (pc *pconsumer) consume() {
 	}
 }
 
-func (pc *pconsumer) addToStream(ctx context.Context, records []*kgo.Record) {
+func (pc *pconsumer) addToStream(ctx context.Context, records []*kgo.Record) error {
 	//TODO: Use a transaction (stream client side) for all records or nothing?
 	eg := &errgroup.Group{}
+	var err error
 	defer func(eg *errgroup.Group) {
-		if err := eg.Wait(); err != nil {
-			fmt.Println(err)
-		}
+		err = eg.Wait()
 	}(eg)
 
 	for _, r := range records {
 		eg.Go(func() error {
-			var schema string
+			var schemaURI string
 			for _, h := range r.Headers {
-				if h.Key == "schema" {
-					schema = string(h.Value)
+				if h.Key == "schemaURI" {
+					schemaURI = string(h.Value)
 					break
 				}
 			}
 
-			err := pc.stream.Add(ctx, sbmodels.Message{
-				SchemaURI: schema,
+			msg := sbmodels.Message{
+				SchemaURI: schemaURI,
 				Data:      r.Value,
-			})
+			}
+
+			zlog.Info().EmbedObject(&msg).Msgf("pooled record with id %s from topic %s", r.Key, r.Topic)
+
+			//TODO: move to another func
+			if schemaURI != "" {
+				vResult, vErr := pc.validator.Validate(schemaURI, r.Value)
+				if vErr != nil {
+					return vErr
+				}
+
+				if !vResult.IsValid() {
+					resultList := vResult.ToList()
+					var rErr error
+					for e := range resultList.Errors {
+						errors.Join(rErr, errors.New(e))
+					}
+
+					fmt.Printf("record data is not a valid %s schema: %v", schemaURI, rErr)
+					return nil
+				}
+			}
+
+			// If it's not invalid, we add to the stream
+			err := pc.stream.Add(ctx, msg)
 			if err != nil {
 				fmt.Printf("failed to add record to stream: %v", err)
 			}
 			return err
 		})
 	}
+	return err
 }
 
 func (c *Consumer) Close() {
@@ -126,14 +159,14 @@ func (c *Consumer) Close() {
 }
 
 func (c *Consumer) Poll() {
-	defer c.Close()
+	defer c.kcli.Close()
 	for {
 		// PollRecords is strongly recommended when using
 		// BlockRebalanceOnPoll. You can tune how many records to
 		// process at once (upper bound -- could all be on one
 		// partition), ensuring that your processor loops complete fast
 		// enough to not block a rebalance too long.
-		fetches := c.kcli.PollRecords(context.Background(), 10000)
+		fetches := c.kcli.PollRecords(context.Background(), c.cfg.MaxPoolRecords)
 		if fetches.IsClientClosed() {
 			return
 		}
@@ -160,12 +193,13 @@ func (c *Consumer) Poll() {
 	}
 }
 
-func (c *Consumer) assigned(_ context.Context, cl *kgo.Client, assigned map[string][]int32) {
+func (c *Consumer) assigned(ctx context.Context, cl *kgo.Client, assigned map[string][]int32) {
 	for topic, partitions := range assigned {
 		for _, partition := range partitions {
 			pc := &pconsumer{
 				kcli:      cl,
 				stream:    c.stream,
+				validator: c.validator,
 				topic:     topic,
 				partition: partition,
 
@@ -174,7 +208,7 @@ func (c *Consumer) assigned(_ context.Context, cl *kgo.Client, assigned map[stri
 				records: make(chan []*kgo.Record, c.cfg.PartitionRecordsChannelSize),
 			}
 			c.consumers[consumerKey{topic, partition}] = pc
-			go pc.consume()
+			go pc.consume(ctx)
 		}
 	}
 }

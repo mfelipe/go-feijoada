@@ -7,11 +7,16 @@ import (
 
 	"github.com/mfelipe/go-feijoada/kafka-consumer/config"
 	"github.com/mfelipe/go-feijoada/kafka-consumer/internal"
+	utilslog "github.com/mfelipe/go-feijoada/utils/log"
 )
 
 func main() {
 	cfg := config.Load()
-	consumer := internal.NewConsumer(cfg)
+
+	//Set global log level
+	utilslog.InitializeGlobal(cfg.Log)
+
+	consumer := internal.NewConsumer(*cfg)
 
 	go consumer.Poll()
 

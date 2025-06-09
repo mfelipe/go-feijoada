@@ -2,13 +2,12 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/mfelipe/go-feijoada/stream-buffer/config"
-	models2 "github.com/mfelipe/go-feijoada/stream-buffer/models"
+	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
 
 type client interface {
@@ -65,16 +64,16 @@ type stream struct {
 	consumerName string
 }
 
-func (s *stream) Add(ctx context.Context, message models2.Message) error {
+func (s *stream) Add(ctx context.Context, message models.Message) error {
 	result := s.client.XAdd(ctx, &redis.XAddArgs{
 		Stream:     s.cfg.Name,
 		NoMkStream: true,
-		Values:     []string{models2.SchemaFieldName, message.SchemaURI, models2.DataFieldName, string(message.Data)},
+		Values:     message.ToValue(),
 	})
 	return resultError(result)
 }
 
-func (s *stream) ReadGroup(ctx context.Context) (map[string]models2.Message, error) {
+func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, error) {
 	result := s.client.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Group:    s.cfg.Group,
 		Consumer: s.consumerName,
@@ -84,7 +83,7 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models2.Message, err
 	})
 
 	if result == nil {
-		return nil, errors.New(models2.NilResult)
+		return nil, errors.New(models.NilResult)
 	}
 
 	xStreams, err := result.Result()
@@ -92,13 +91,10 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models2.Message, err
 		return nil, err
 	}
 
-	messageMap := make(map[string]models2.Message)
+	messageMap := make(map[string]models.Message)
 	for _, xStream := range xStreams {
-		for _, message := range xStream.Messages {
-			messageMap[message.ID] = models2.Message{
-				SchemaURI: message.Values[models2.SchemaFieldName].(string),
-				Data:      json.RawMessage(message.Values[models2.DataFieldName].(string)),
-			}
+		for _, xMessage := range xStream.Messages {
+			messageMap[xMessage.ID] = models.MessageFromMap(xMessage.Values)
 		}
 	}
 
@@ -124,7 +120,7 @@ type cmdErr interface {
 func resultError[T cmdErr](result T) error {
 	var err error
 	if result == nil {
-		err = errors.New(models2.NilResult)
+		err = errors.New(models.NilResult)
 	} else {
 		err = result.Err()
 	}

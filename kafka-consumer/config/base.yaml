@@ -1,5 +1,7 @@
 ---
 kc:
+  log:
+    level: "debug"
   maxProcessRoutines: 50
   partitionRecordsChannelSize: 10
   closeTimeout: 1m
