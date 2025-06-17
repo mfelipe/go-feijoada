@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  schema-repository:
+    build:
+      context: .
+      dockerfile: ./schema-repository/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SR_REPOSITORY_REDIS_ADDRESS=redis:6379
+      # Uncomment below and comment out the Redis config above to use Valkey instead
+      # - SR_REPOSITORY_VALKEY_ADDRESS=valkey:6379
+    depends_on:
+      - redis
+      # - valkey
+    networks:
+      - feijoada-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - feijoada-network
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+  # Uncomment to use Valkey instead of Redis
+  # valkey:
+  #   image: valkeyio/valkey:7.2.0-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - feijoada-network
+  #   volumes:
+  #     - valkey-data:/data
+  #   command: valkey-server --appendonly yes
+
+networks:
+  feijoada-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  # valkey-data:

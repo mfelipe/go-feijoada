@@ -94,7 +94,9 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 	messageMap := make(map[string]models.Message)
 	for _, xStream := range xStreams {
 		for _, xMessage := range xStream.Messages {
-			messageMap[xMessage.ID] = models.MessageFromMap(xMessage.Values)
+			var m = &models.Message{}
+			m.FromRedisValue(xMessage.Values)
+			messageMap[xMessage.ID] = *m
 		}
 	}
 

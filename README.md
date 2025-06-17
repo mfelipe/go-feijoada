@@ -16,6 +16,14 @@ More details are available in each project READMEs.
    - Configurable by file or environment variables
    - Redis or Valkey for persistence
 
+# AI?
+
+I've used a few AI tools to help me with this project. They can be extremely time-saving if used responsibly, mainly
+(but not exclusively) for boring or repetitive tasks like creating new base projects, tests scenarios, READMEs, etc.
+
+- [AWS Q](https://aws.amazon.com/en/q/)
+- [Google Jules](https://jules.google.com)
+
 ## Other thoughts:
 
 - The modules are in the same repository for a reason: this is a study, an experience, an example. I didn't want it to

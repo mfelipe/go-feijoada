@@ -31,7 +31,7 @@ type Consumer struct {
 	Kafka                       Kafka           `json:"kafka" koanf:"kafka,required"`
 	Stream                      sbcfg.Config    `json:"stream" koanf:"stream,required"`
 	MaxProcessRoutines          int             `json:"maxProcessRoutines" koanf:"maxProcessRoutines,required,gt=0"`
-	MaxPoolRecords              int             `json:"maxPoolRecords" koanf:"maxPoolRecords,required,gt=0"`
+	MaxPollRecords              int             `json:"maxPollRecords" koanf:"maxPollRecords,required,gt=0"`
 	PartitionRecordsChannelSize int             `json:"partitionRecordsChannelSize" koanf:"partitionRecordsChannelSize,required,gte=5"`
 	CloseTimeout                time.Duration   `json:"closeTimeout" koanf:"closeTimeout,required"`
 }

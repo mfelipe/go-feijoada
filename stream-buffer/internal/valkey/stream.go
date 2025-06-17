@@ -55,7 +55,9 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 	messageMap := make(map[string]models.Message)
 	for _, entries := range entriesArrayMap {
 		for _, entry := range entries {
-			messageMap[entry.ID] = models.MessageFromMap(entry.FieldValues)
+			var m = &models.Message{}
+			m.FromValkeyValue(entry.FieldValues)
+			messageMap[entry.ID] = *m
 		}
 	}
 

@@ -7,7 +7,6 @@ replace github.com/mfelipe/go-feijoada/utils => ../utils
 require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/justinas/alice v1.2.0
 	github.com/mfelipe/go-feijoada/utils v0.0.0-00010101000000-000000000000
 	github.com/redis/go-redis/v9 v9.10.0
 	github.com/rs/zerolog v1.34.0
@@ -92,7 +91,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
-	github.com/rs/xid v1.6.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
