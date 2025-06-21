@@ -31,8 +31,8 @@ func NewSchemaService(cfg config.RepoData, r repository.Repository) *SchemaServi
 }
 
 // AddSchema adds a new schema or a new version of an existing schema.
-func (s *SchemaService) AddSchema(ctx context.Context, name string, version models.Semver, schemaContent json.RawMessage) error {
-	return s.r.Set(ctx, s.schemaKey(name, version), string(schemaContent))
+func (s *SchemaService) AddSchema(ctx context.Context, name string, version models.Semver, schema json.RawMessage) error {
+	return s.r.Set(ctx, s.schemaKey(name, version), string(schema))
 }
 
 // DeleteSchema removes a specific version of a schema
@@ -65,12 +65,12 @@ func (s *SchemaService) schemaKey(name string, version models.Semver) string {
 func safeToRawMessage(schema string) (rm json.RawMessage, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			e = errors.New(ErrorInvalidJSONContent)
+			e = errors.New(ErrorInvalidJSONSchema)
 			switch err := r.(type) {
 			case error:
-				log.Err(err).Msgf("%s: %s", ErrorInvalidJSONContent, r)
+				log.Err(err).Msgf("%s: %s", ErrorInvalidJSONSchema, r)
 			default:
-				log.Error().Msgf("%s: %s", ErrorInvalidJSONContent, err)
+				log.Error().Msgf("%s: %s", ErrorInvalidJSONSchema, err)
 			}
 		}
 	}()

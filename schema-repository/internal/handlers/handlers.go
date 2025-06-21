@@ -33,7 +33,7 @@ func (h *Handler) CreateSchemaHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.SchemaSvc.AddSchema(ctx, reqURI.Name, reqURI.Version, req.Content); err != nil {
+	if err := h.SchemaSvc.AddSchema(ctx, reqURI.Name, reqURI.Version, req.Schema); err != nil {
 		log.Err(err).Msg("internal server error")
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse{Error: "An unexpected error occurred while persisting the schema"})
 		return
@@ -50,7 +50,7 @@ func (h *Handler) GetSchemaHandler(ctx *gin.Context) {
 		return
 	}
 
-	schemaContent, err := h.SchemaSvc.GetSchema(ctx, reqURI.Name, reqURI.Version)
+	schema, err := h.SchemaSvc.GetSchema(ctx, reqURI.Name, reqURI.Version)
 	if err != nil {
 		errStr := err.Error()
 		if errStr == service.ErrorSchemaNotFound {
@@ -63,7 +63,7 @@ func (h *Handler) GetSchemaHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, SchemaBody{
-		Content: schemaContent,
+		Schema: schema,
 	})
 }
 

@@ -1,6 +1,6 @@
 package service
 
 const (
-	ErrorSchemaNotFound     = "schema not found"
-	ErrorInvalidJSONContent = "invalid JSON content"
+	ErrorSchemaNotFound    = "schema not found"
+	ErrorInvalidJSONSchema = "invalid JSON schema"
 )

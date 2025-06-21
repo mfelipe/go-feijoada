@@ -8,7 +8,7 @@ import (
 
 // SchemaBody defines the request body for creating a new schema.
 type SchemaBody struct {
-	Content json.RawMessage `json:"content" binding:"required,json_schema"`
+	Schema json.RawMessage `json:"schema" binding:"required,json_schema"`
 }
 
 // SchemaRequestURI defines the response body for retrieving or creating a schema.
@@ -19,7 +19,7 @@ type SchemaRequestURI struct {
 
 // SchemaResponseBody defines the response body for retrieving or creating a schema.
 type SchemaResponseBody struct {
-	Content json.RawMessage `json:"content"`
+	Schema json.RawMessage `json:"schema"`
 }
 
 // ErrorResponse defines the structure for error messages.

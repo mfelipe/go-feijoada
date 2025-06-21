@@ -1,7 +1,6 @@
 # Schema Repository
 
-A simple lightweight service for storing and retrieving JSON schemas with versioning support. Part of the go-feijoada
-project.
+A simple service for storing and retrieving JSON schemas with versioning support. Part of the go-feijoada project.
 
 ## Overview
 
@@ -11,13 +10,13 @@ Schema Repository provides a RESTful API for managing JSON schemas with semantic
 - Retrieve schemas by name and version
 - Delete schemas when they're no longer needed
 
-The service uses Redis or Valkey as the backend storage system, making it fast and reliable.
+The service uses Redis or Valkey as repository for low-latency operation and low resource consumption for this scenario.
 
 ## Features
 
 - **Semantic Versioning**: Store multiple versions of the same schema
 - **RESTful API**: Simple HTTP interface for schema management using [gin-gonic/gin](https://github.com/gin-gonic/gin)
-- **Flexible Storage**: Support for both Redis and Valkey backends
+- **Flexible Repository**: Support for Redis and Valkey backends (not using Valkey compatible Redis client for both)
 - **Health Checks**: Built-in health check endpoints
   using [tavsec/gin-healthcheck](https://github.com/tavsec/gin-healthcheck)
 - **Configurable**: Easy configuration via YAML files and environment variables
@@ -26,12 +25,19 @@ The service uses Redis or Valkey as the backend storage system, making it fast a
 ## Missing Features
 
 - **Version compatibility check**: Schemas are not checked for retro-compatibility
+- **Weak versioning**: Versions of a schema can be overwritten, which could cause invalid payloads to be valid and vice
+  versa
 - **Valkey integrated test**: Redis only
 
-## Getting Started
+## Things that would be nice but may be out of the scope:
 
+- Change Add Schema operation to:
+  - Automatically increment the version accordingly to the input
+  - Validate if the new schema version is compatible with the previous (if new MINOR or PATCH version)
+- List Schema names and versions
+
+## Usage Instructions
 ### Prerequisites
-
 - Go 1.24 or higher
 - Redis or Valkey instance
 
@@ -40,10 +46,6 @@ The service uses Redis or Valkey as the backend storage system, making it fast a
 ```bash
 # Clone the repository
 git clone https://github.com/mfelipe/go-feijoada.git
-cd go-feijoada/schema-repository
-
-# Build the service
-go build -o schema-repository ./cmd
 ```
 
 ### Configuration
@@ -54,6 +56,8 @@ Configuration is managed through YAML files and environment variables. The defau
 ```yaml
 sr:
   port: 8080
+  log:
+    level: "info"
   repository:
     data:
       keyPrefix: "schema-repository"
@@ -75,7 +79,13 @@ export SR_REPOSITORY_VALKEY_PASSWORD=your_password
 ### Running the Service
 
 ```bash
+# With running repository
+go mod tidy
+go build ./...
 ./schema-repository
+
+# Composed with a repository
+docker compose -f docker-compose.yml -p go-feijoada up -d
 ```
 
 The service will start on the configured port (default: 8080).
@@ -98,7 +108,7 @@ Example:
 ```bash
 curl -X POST http://localhost:8080/schemas/user/1.0.0 \
   -H "Content-Type: application/json" \
-  -d '{"type": "object", "properties": {"name": {"type": "string"}}}'
+  -d '{"schema":{"type": "object", "properties": {"name": {"type": "string"}}}}'
 ```
 
 ### Get a Schema
@@ -136,7 +146,7 @@ curl -X DELETE http://localhost:8080/schemas/user/1.0.0
 The service includes a health check endpoint:
 
 ```
-GET /health
+GET /healthz
 ```
 
 ## Integration with Other Services
@@ -146,25 +156,13 @@ Schema Repository is designed to work with other components in the go-feijoada p
 - **Schema Validator**: For validating data against stored schemas
 - **Kafka Consumer**: Indirectly, for processing messages that requires schema validation
 
-## Development
-
-### Running Tests
-
-```bash
-go test ./...
-```
-
 ### Project Structure
 
 - `cmd/`: Application entry point
-- `config/`: Configuration files and loading logic
+- `config/`:
 - `internal/`: Internal packages
     - `clients/`: Redis and Valkey client implementations
     - `handlers/`: HTTP request handlers
     - `models/`: Data models
     - `repository/`: Storage layer abstraction
     - `service/`: Business logic
-
-## License
-
-See the [LICENSE](../LICENSE.md) file for details.

@@ -1,0 +1,26 @@
+FROM golang:alpine AS builder
+
+WORKDIR /src
+
+# Copy project source
+COPY kafka-consumer ./kafka-consumer
+# Copy the utils module (required by the replace directive)
+COPY utils ./utils
+
+WORKDIR /src/kafka-consumer
+
+# Download dependencies and build the application
+RUN apk update && apk --no-cache add ca-certificates && \
+    go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -tags musl -o /main cmd/main.go
+
+# Use a minimal image for the final stage
+FROM scratch AS runtime
+
+# Copy the binary, base config file and certs from the builder stage
+COPY --from=builder /main /
+COPY --from=builder /src/kafka-consumer/config/base.yaml /config/base.yaml
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Command to run the executable
+CMD ["/main"]

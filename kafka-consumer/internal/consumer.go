@@ -116,7 +116,9 @@ func (pc *pconsumer) validateRecords(ctx context.Context, records []*kgo.Record)
 		}
 
 		msg := sbmodels.Message{
+			Origin:    r.Topic,
 			SchemaURI: schemaURI,
+			Timestamp: r.Timestamp,
 			Data:      r.Value,
 		}
 

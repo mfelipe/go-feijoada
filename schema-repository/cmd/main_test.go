@@ -100,11 +100,11 @@ func setupTestContext() (*testContext, error) {
 	}
 }
 
-// Schema Contents for Tests
+// Test schemas
 var (
-	validSchemaV1Content      = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"}}}`)
-	compatibleSchemaV2Content = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "integer"}}}`)
-	invalidJSONContent        = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"`) // Missing closing brace
+	validSchemaV1            = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"}}}`)
+	validCompatibleSchemaV12 = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "integer"}}}`)
+	invalidJSONSchema        = json.RawMessage(`{"type": "object", "properties": {"name": {"type": "string"`) // Missing closing brace
 )
 
 func TestMain(m *testing.M) {
@@ -126,7 +126,7 @@ func Test_AddSchema(t *testing.T) {
 		name           string
 		schemaName     string
 		schemaVersion  string
-		content        json.RawMessage
+		schemaJSON     json.RawMessage
 		expectedStatus int
 		expectError    bool
 	}{
@@ -134,23 +134,23 @@ func Test_AddSchema(t *testing.T) {
 			name:           "Valid schema v1",
 			schemaName:     "user",
 			schemaVersion:  "1.0.0",
-			content:        validSchemaV1Content,
+			schemaJSON:     validSchemaV1,
 			expectedStatus: http.StatusCreated,
 			expectError:    false,
 		},
 		{
-			name:           "Valid schema v2 compatible",
+			name:           "Valid schema v1.2 compatible",
 			schemaName:     "user",
-			schemaVersion:  "2.0.0",
-			content:        compatibleSchemaV2Content,
+			schemaVersion:  "1.2.0",
+			schemaJSON:     validCompatibleSchemaV12,
 			expectedStatus: http.StatusCreated,
 			expectError:    false,
 		},
 		{
-			name:           "Invalid JSON content",
+			name:           "Invalid JSON schemaJSON",
 			schemaName:     "user",
 			schemaVersion:  "1.0.0",
-			content:        invalidJSONContent,
+			schemaJSON:     invalidJSONSchema,
 			expectedStatus: http.StatusBadRequest,
 			expectError:    true,
 		},
@@ -158,7 +158,7 @@ func Test_AddSchema(t *testing.T) {
 			name:           "Invalid schemaVersion format",
 			schemaName:     "user",
 			schemaVersion:  "invalid",
-			content:        validSchemaV1Content,
+			schemaJSON:     validSchemaV1,
 			expectedStatus: http.StatusBadRequest,
 			expectError:    true,
 		},
@@ -167,7 +167,7 @@ func Test_AddSchema(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			url := fmt.Sprintf("%s/schemas/%s/%s", url, tt.schemaName, tt.schemaVersion)
-			body := map[string]json.RawMessage{"content": tt.content}
+			body := map[string]json.RawMessage{"schemaJSON": tt.schemaJSON}
 			jsonBody, _ := json.Marshal(body)
 
 			resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonBody)))
@@ -191,7 +191,7 @@ func Test_AddSchema(t *testing.T) {
 				}
 			} else {
 				if resp.ContentLength != 0 {
-					t.Error("Expected no content in response, but it wasn't empty")
+					t.Error("Expected no schemaJSON in response, but it wasn't empty")
 				}
 			}
 		})
@@ -203,7 +203,7 @@ func Test_GetSchema(t *testing.T) {
 	schemaName := "product"
 	version := "1.0.0"
 	createURL := fmt.Sprintf("%s/schemas/%s/%s", url, schemaName, version)
-	createBody := map[string]json.RawMessage{"content": validSchemaV1Content}
+	createBody := map[string]json.RawMessage{"schemaJSON": validSchemaV1}
 	jsonBody, _ := json.Marshal(createBody)
 
 	resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
@@ -264,8 +264,8 @@ func Test_GetSchema(t *testing.T) {
 					t.Error("Expected error in response, but got none")
 				}
 			} else {
-				if _, hasContent := response["content"]; !hasContent {
-					t.Error("Expected content in response, but got none")
+				if _, hasContent := response["schemaJSON"]; !hasContent {
+					t.Error("Expected schemaJSON in response, but got none")
 				}
 			}
 		})
@@ -277,7 +277,7 @@ func Test_DeleteSchema(t *testing.T) {
 	schemaName := "toDelete"
 	version := "1.0.0"
 	createURL := fmt.Sprintf("%s/schemas/%s/%s", url, schemaName, version)
-	createBody := map[string]json.RawMessage{"content": validSchemaV1Content}
+	createBody := map[string]json.RawMessage{"schemaJSON": validSchemaV1}
 	jsonBody, _ := json.Marshal(createBody)
 
 	resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
