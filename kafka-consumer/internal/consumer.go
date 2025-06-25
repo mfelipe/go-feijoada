@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -54,6 +53,7 @@ func NewConsumer(cfg config.Consumer) *Consumer {
 		validator: schemavalidator.New(cfg.SchemaValidator),
 	}
 
+	zlog.Info().EmbedObject(cfg.Kafka).Msg("creating kafka client...")
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(strings.Split(cfg.Kafka.Brokers, ",")...),
 		kgo.ConsumeTopics(strings.Split(cfg.Kafka.Topics, ",")...),
@@ -64,12 +64,12 @@ func NewConsumer(cfg config.Consumer) *Consumer {
 		kgo.DisableAutoCommit(),
 		kgo.BlockRebalanceOnPoll())
 	if err != nil {
-		log.Fatal(err)
+		zlog.Fatal().Err(err).Msg("failed to create the kafka client")
 	}
 
 	// check connectivity to cluster
-	if err = c.kcli.Ping(context.Background()); err != nil {
-		log.Fatal(err)
+	if err = client.Ping(context.Background()); err != nil {
+		zlog.Fatal().Err(err).Msg("failed to connect to kafka broker")
 	}
 
 	c.kcli = client

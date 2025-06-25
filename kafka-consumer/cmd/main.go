@@ -24,11 +24,14 @@ func main() {
 	stopped := make(chan byte)
 	go func() {
 		defer close(stopped)
+		log.Info().Msg("starting kafka message polling...")
 		consumer.Poll()
 	}()
 
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, os.Interrupt, os.Kill)
+
+	log.Info().Msg("kafka consumer is live!")
 
 	done := make(chan struct{})
 	select {

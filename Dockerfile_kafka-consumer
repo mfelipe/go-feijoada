@@ -6,6 +6,10 @@ WORKDIR /src
 COPY kafka-consumer ./kafka-consumer
 # Copy the utils module (required by the replace directive)
 COPY utils ./utils
+# Copy the stream-buffer module (required by the replace directive)
+COPY stream-buffer ./stream-buffer
+# Copy the schema-validator module (required by the replace directive)
+COPY schema-validator ./schema-validator
 
 WORKDIR /src/kafka-consumer
 

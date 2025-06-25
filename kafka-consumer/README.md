@@ -59,12 +59,12 @@ You can configure Redis or Valkey connection details through environment variabl
 
 ```bash
 # For Redis
-export KC_REPOSITORY_REDIS_ADDRESS=localhost:6379
-export KC_REPOSITORY_REDIS_PASSWORD=your_password
+export KC_STREAM_REDIS_ADDRESS=localhost:6379
+export KC_STREAM_REDIS_PASSWORD=your_password
 
 # For Valkey
-export KC_REPOSITORY_VALKEY_ADDRESS=localhost:6379
-export KC_REPOSITORY_VALKEY_PASSWORD=your_password
+export KC_STREAM_VALKEY_ADDRESS=localhost:6379
+export KC_STREAM_VALKEY_PASSWORD=your_password
 ```
 
 ### Running the server

@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	svcfg "github.com/mfelipe/go-feijoada/schema-validator/config"
 	sbcfg "github.com/mfelipe/go-feijoada/stream-buffer/config"
 	utilscfg "github.com/mfelipe/go-feijoada/utils/config"
@@ -40,4 +42,10 @@ type Kafka struct {
 	Brokers string `json:"brokers" koanf:"brokers"`
 	Group   string `json:"group" koanf:"group"`
 	Topics  string `json:"topics" koanf:"topics"`
+}
+
+func (k Kafka) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("brokers", k.Brokers).
+		Str("group", k.Group).
+		Str("topics", k.Topics)
 }
