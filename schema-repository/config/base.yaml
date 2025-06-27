@@ -1,0 +1,9 @@
+---
+sr:
+  port: 8080
+  log:
+    level: "debug"
+  repository:
+    data:
+      keyPrefix: "schema-repository"
+      keySeparator: ":"

@@ -1,0 +1,10 @@
+---
+sc:
+  log:
+    level: "debug"
+  dynamoDB:
+    tableName: "stream-consumer"
+    retryWaitMax: 10s
+    retryMax: 5
+  stream:
+    group: "stream-consumer"
