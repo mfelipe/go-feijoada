@@ -2,6 +2,9 @@
 sc:
   log:
     level: "debug"
+  consumer:
+    batchSize: 10
+    interval: 1s
   dynamoDB:
     tableName: "stream-consumer"
     retryWaitMax: 10s

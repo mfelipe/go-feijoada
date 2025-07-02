@@ -1,4 +1,20 @@
 services:
+  stream-consumer:
+    build:
+      no_cache: true
+      context: .
+      dockerfile: Dockerfile_stream-consumer
+    environment:
+      - SC_STREAM_REDIS_ADDRESS=redis:6379
+      - SC_DYNAMODB_ENDPOINT=http://dynamodb:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+      init-dynamodb:
+        condition: service_completed_successfully
+    networks:
+      - feijoada-network
+
   schema-repository:
     build:
       no_cache: true
@@ -25,8 +41,8 @@ services:
       - KC_KAFKA_TOPICS=test-topic-1,test-topic-2
       - KC_KAFKA_GROUP=feijoada-group
     depends_on:
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     networks:
@@ -59,7 +75,7 @@ services:
     image: bitnami/kafka:latest
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - feijoada-network
     entrypoint: [ '/bin/sh', '-c' ]
@@ -73,6 +89,38 @@ services:
       echo 'Successfully created the following topics:'
       kafka-topics.sh --bootstrap-server kafka:9092 --list
       "
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb/data:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - feijoada-network
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+
+  init-dynamodb:
+    build:
+      dockerfile_inline:
+        |
+        FROM alpine:latest
+        RUN apk update && apk --no-cache add bash jq aws-cli moreutils
+        ENTRYPOINT [ "sh", "-c", "bash ./scripts/create_dynamodb_tables.sh" ]
+      no_cache: true
+      context: ./docker/dynamodb
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=ddblocal
+    volumes:
+      - "./docker/dynamodb/scripts:/scripts"
+    depends_on:
+      dynamodb:
+        condition: service_started
+    networks:
+      - feijoada-network
 
   redis:
     container_name: feijoada-redis
