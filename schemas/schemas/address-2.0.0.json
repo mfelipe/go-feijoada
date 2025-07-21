@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "http://schema-repository:8080/schemas/address/2.0.0",
+  "version": "2.0.0",
+  "title": "Address",
+  "description": "A user's address (v2)",
+  "type": "object",
+  "properties": {
+    "street": { "type": "string" },
+    "city": { "type": "string" },
+    "postalCode": { "type": "string" },
+    "country": { "type": "string" }
+  },
+  "required": ["street", "city", "postalCode"]
+}
+

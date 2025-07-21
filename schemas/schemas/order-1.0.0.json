@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "http://schema-repository:8080/schemas/order/1.0.0",
+  "version": "1.0.0",
+  "title": "Order",
+  "description": "An order placed by a user",
+  "type": "object",
+  "properties": {
+    "orderId": { "type": "integer" },
+    "userId": { "type": "integer" },
+    "productIds": { "type": "array", "items": { "type": "integer" } },
+    "total": { "type": "number" }
+  },
+  "required": ["orderId", "userId", "productIds", "total"]
+}
+
