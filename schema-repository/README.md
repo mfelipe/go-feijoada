@@ -76,20 +76,6 @@ export SR_REPOSITORY_VALKEY_ADDRESS=localhost:6379
 export SR_REPOSITORY_VALKEY_PASSWORD=your_password
 ```
 
-### Running the Service
-
-```bash
-# With running repository
-go mod tidy
-go build ./...
-./schema-repository
-
-# Composed with a repository
-docker compose -f docker-compose.yml -p go-feijoada up -d
-```
-
-The service will start on the configured port (default: 8080).
-
 ## API Reference
 
 ### Create a Schema
@@ -166,3 +152,8 @@ Schema Repository is designed to work with other components in the go-feijoada p
     - `models/`: Data models
     - `repository/`: Storage layer abstraction
     - `service/`: Business logic
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](../LICENSE.md) file for details.
+
