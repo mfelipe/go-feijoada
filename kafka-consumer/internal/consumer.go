@@ -49,8 +49,9 @@ type Consumer struct {
 func NewConsumer(cfg config.Consumer) *Consumer {
 	c := &Consumer{
 		cfg:       cfg,
-		stream:    streambuffer.New(cfg.Stream),
+		stream:    streambuffer.New(cfg.Repository),
 		validator: schemavalidator.New(cfg.SchemaValidator),
+		consumers: make(map[consumerKey]*pconsumer),
 	}
 
 	zlog.Info().EmbedObject(cfg.Kafka).Msg("creating kafka client...")
@@ -89,13 +90,15 @@ func (pc *pconsumer) consume(_ context.Context) {
 			ctx := context.Background()
 			validMsgs := pc.validateRecords(ctx, recs)
 			err := pc.addToStream(ctx, validMsgs)
+			if err != nil {
+				zlog.Error().Err(err).Str("topic", pc.topic).Int32("partition", pc.partition).Msg("error when adding messages to the stream")
+				continue
+			}
 
-			if err == nil {
-				zlog.Debug().Str("topic", pc.topic).Int32("partition", pc.partition).Msg("messages validated and added to the stream, about to commit")
-				err = pc.kcli.CommitRecords(ctx, recs...)
-				if err != nil {
-					zlog.Error().Err(err).Str("topic", pc.topic).Int32("partition", pc.partition).Int64("offset", recs[len(recs)-1].Offset+1).Msg("error when committing offsets to kafka")
-				}
+			zlog.Debug().Str("topic", pc.topic).Int32("partition", pc.partition).Int("messages", len(validMsgs)).Msg("messages validated and added to the stream, about to commit")
+			err = pc.kcli.CommitRecords(ctx, recs...)
+			if err != nil {
+				zlog.Error().Err(err).Str("topic", pc.topic).Int32("partition", pc.partition).Int64("offset", recs[len(recs)-1].Offset+1).Msg("error when committing offsets to kafka")
 			}
 		}
 	}
@@ -145,7 +148,12 @@ func (pc *pconsumer) addToStream(ctx context.Context, msgs []*sbmodels.Message) 
 	}(eg)
 
 	for _, msg := range msgs {
+		if msg == nil {
+			zlog.Error().Msg("received nil message, skipping")
+			continue
+		}
 		eg.Go(func() error {
+			zlog.Debug().Msg("adding message to stream")
 			err := pc.stream.Add(ctx, *msg)
 			if err != nil {
 				zlog.Error().Err(err).Msg("failed to add record to stream")

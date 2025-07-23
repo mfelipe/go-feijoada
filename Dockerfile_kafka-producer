@@ -1,0 +1,26 @@
+FROM golang:alpine AS builder
+
+WORKDIR /src
+
+# Copy project source
+COPY kafka-producer ./kafka-producer
+# Copy the utils module (required by the replace directive)
+COPY utils ./utils
+# Copy the schemas module (required by the replace directive)
+COPY schemas ./schemas
+
+WORKDIR /src/kafka-producer
+
+# Build the application
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -tags musl -o /main cmd/main.go
+
+# Use a minimal image for the final stage
+FROM scratch AS runtime
+
+# Copy the binary, base config file and certs from the builder stage
+COPY --from=builder /main /
+COPY --from=builder /src/kafka-producer/config/base.yaml /config/base.yaml
+
+# Command to run the executable
+CMD ["/main"]

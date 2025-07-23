@@ -3,6 +3,8 @@ package redis
 import (
 	"context"
 	"errors"
+	zlog "github.com/rs/zerolog/log"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 
@@ -23,14 +25,23 @@ func New(serverCfg config.Server, streamCfg config.Stream) *stream {
 		consumerName: serverCfg.ClientName,
 	}
 
+	var once sync.Once
+	onConnFunc := func(ctx context.Context, cn *redis.Conn) error {
+		var err error
+		once.Do(func() {
+			zlog.Debug().Str("stream", s.cfg.Name).Str("group", s.cfg.Group).Msg("trying to create redis stream group")
+			status := cn.XGroupCreateMkStream(ctx, s.cfg.Name, s.cfg.Group, "0")
+			if status.Err() != nil && !errors.Is(status.Err(), redis.Nil) {
+				err = status.Err()
+			}
+		})
+		return err
+	}
 	if serverCfg.IsCluster {
 		c := redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:      []string{serverCfg.Address},
 			ClientName: serverCfg.ClientName,
-			OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-				_ = cn.XGroupCreateMkStream(ctx, s.cfg.Name, s.cfg.Group, "0")
-				return nil
-			},
+			OnConnect:  onConnFunc,
 			NewClient: func(opt *redis.Options) *redis.Client {
 				opt.CredentialsProvider = func() (username string, password string) {
 					return serverCfg.Username, serverCfg.Password
@@ -42,11 +53,8 @@ func New(serverCfg config.Server, streamCfg config.Stream) *stream {
 		s.client = c
 	} else {
 		c := redis.NewClient(&redis.Options{
-			Addr: serverCfg.Address,
-			OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-				_ = cn.XGroupCreateMkStream(ctx, s.cfg.Name, s.cfg.Group, "0")
-				return nil
-			},
+			Addr:      serverCfg.Address,
+			OnConnect: onConnFunc,
 			CredentialsProvider: func() (username string, password string) {
 				return serverCfg.Username, serverCfg.Password
 			},

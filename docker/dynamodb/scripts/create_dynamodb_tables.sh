@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Default values
-LOG_TIMESTAMP='[%Y-%m-%d %H:%M:%S]'
-
 # Default parameters values
 ENDPOINT="http://dynamodb:8000"
 TIMEOUT=5
@@ -46,7 +43,7 @@ echo "Timeout: $TIMEOUT s, Retries: $RETRIES, Wait: $WAIT s, Force: $FORCE"
 
 # Wait for DynamoDB to become available
 TRY=1
-while [ $TRY -le $RETRIES ]; do
+while [ $TRY -le "$RETRIES" ]; do
   echo "Checking DynamoDB availability (Attempt $TRY/$RETRIES)..."
   if timeout "$TIMEOUT"s aws dynamodb list-tables --endpoint-url "$ENDPOINT"; then
     echo "DynamoDB is up!"
@@ -58,7 +55,7 @@ while [ $TRY -le $RETRIES ]; do
   fi
 done
 
-if [ $TRY -gt $RETRIES ]; then
+if [ $TRY -gt "$RETRIES" ]; then
   echo "DynamoDB not reachable after $RETRIES attempts."
   exit 1
 fi

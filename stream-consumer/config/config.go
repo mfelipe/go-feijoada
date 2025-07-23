@@ -25,10 +25,10 @@ func Load() *Config {
 }
 
 type Config struct {
-	Log      utilslog.Config `json:"log" koanf:"log"`
-	Consumer Consumer        `json:"consumer" koanf:"consumer,required"`
-	DynamoDB DynamoDB        `json:"dynamoDB" koanf:"dynamoDB"`
-	Stream   sbcfg.Config    `json:"stream" koanf:"stream,required"`
+	Log        utilslog.Config `json:"log" koanf:"log"`
+	Consumer   Consumer        `json:"consumer" koanf:"consumer,required"`
+	DynamoDB   DynamoDB        `json:"dynamoDB" koanf:"dynamoDB"`
+	Repository sbcfg.Config    `json:"repository" koanf:"repository,required"`
 }
 
 type Consumer struct {
