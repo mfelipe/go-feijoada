@@ -1,0 +1,5 @@
+---
+kp:
+  log:
+    level: "debug"
+  closeTimeout: 1m

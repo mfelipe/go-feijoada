@@ -46,9 +46,7 @@ func main() {
 	}
 
 	// Close consumer
-	if err = w.Close(); err != nil {
-		log.Error().Err(err).Msg("error closing consumer")
-	}
+	w.Close()
 
 	log.Info().Msg("Stream Consumer shutdown complete")
 }

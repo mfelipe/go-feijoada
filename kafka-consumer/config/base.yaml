@@ -7,5 +7,9 @@ kc:
   closeTimeout: 1m
   kafka:
     group: "feijoada-consumer-group"
-    topics:
-      - "input-topic"
+  repository:
+    stream:
+      name: "feijoada-stream"
+      group: "feijoada-stream-group"
+      readCount: 100
+      block:  100ms

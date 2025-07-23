@@ -29,12 +29,8 @@ func New(cfg sccfg.DynamoDB) *Client {
 	}
 
 	var options []func(*dynamodb.Options)
-	if cfg.Endpoint != "" {
-		options = append(options, func(o *dynamodb.Options) {
-			o.BaseEndpoint = aws.String(cfg.Endpoint)
-		})
-	}
 
+	//TODO: move retry and backoff options to Config
 	options = append(options, func(o *dynamodb.Options) {
 		o.Retryer = retry.NewStandard(func(o *retry.StandardOptions) {
 			o.MaxAttempts = cfg.RetryMax
@@ -48,7 +44,8 @@ func New(cfg sccfg.DynamoDB) *Client {
 	client := dynamodb.NewFromConfig(awsCfg, options...)
 
 	return &Client{
-		db: client,
+		db:        client,
+		tableName: cfg.TableName,
 	}
 }
 

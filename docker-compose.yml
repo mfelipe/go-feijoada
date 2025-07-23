@@ -1,4 +1,24 @@
 services:
+  stream-consumer:
+    build:
+      no_cache: true
+      context: .
+      dockerfile: Dockerfile_stream-consumer
+    environment:
+      - SC_REPOSITORY_REDIS_ADDRESS=redis:6379
+      - SC_DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_ENDPOINT_URL_DYNAMODB=http://dynamodb:8000
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=ddblocal
+    depends_on:
+      redis:
+        condition: service_healthy
+      init-dynamodb:
+        condition: service_completed_successfully
+    networks:
+      - feijoada-network
+
   schema-repository:
     build:
       no_cache: true
@@ -14,6 +34,24 @@ services:
     networks:
       - feijoada-network
 
+  init-schema-repository:
+    build:
+      dockerfile_inline:
+        |
+        FROM alpine:latest
+        RUN apk update && apk --no-cache add bash jq curl
+        ENTRYPOINT [ "sh", "-c", "bash ./scripts/initialize_schema_repository.sh" ]
+      no_cache: true
+      context: ./docker/schemas
+    volumes:
+      - "./schemas/schemas:/schemas"
+      - "./docker/schemas/scripts:/scripts"
+    depends_on:
+      schema-repository:
+        condition: service_started
+    networks:
+      - feijoada-network
+
   kafka-consumer:
     build:
       no_cache: true
@@ -22,13 +60,28 @@ services:
     environment:
       - KC_REPOSITORY_REDIS_ADDRESS=redis:6379
       - KC_KAFKA_BROKERS=kafka:9092
-      - KC_KAFKA_TOPICS=test-topic-1,test-topic-2
+      - KC_KAFKA_TOPICS=address-topic,order-topic,payment-topic,product-topic,user-topic
       - KC_KAFKA_GROUP=feijoada-group
     depends_on:
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
+    networks:
+      - feijoada-network
+
+  kafka-producer:
+    build:
+      no_cache: true
+      context: .
+      dockerfile: Dockerfile_kafka-producer
+    environment:
+      - KP_KAFKA_BROKERS=kafka:9092
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+      init-schema-repository:
+        condition: service_completed_successfully
     networks:
       - feijoada-network
 
@@ -59,20 +112,55 @@ services:
     image: bitnami/kafka:latest
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - feijoada-network
     entrypoint: [ '/bin/sh', '-c' ]
     command: |
-      " 
+      "
       # blocks until kafka is reachable
       kafka-topics.sh --bootstrap-server kafka:9092 --list
       echo 'Creating Kafka topics'
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic-1 --replication-factor 1 --partitions 10
-      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic test-topic-2 --replication-factor 1 --partitions 100
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic address-topic --replication-factor 1 --partitions 10
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic order-topic --replication-factor 1 --partitions 10
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic payment-topic --replication-factor 1 --partitions 10
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic product-topic --replication-factor 1 --partitions 10
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic user-topic --replication-factor 1 --partitions 10
       echo 'Successfully created the following topics:'
       kafka-topics.sh --bootstrap-server kafka:9092 --list
       "
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb/data:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - feijoada-network
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+
+  init-dynamodb:
+    build:
+      dockerfile_inline:
+        |
+        FROM alpine:latest
+        RUN apk update && apk --no-cache add bash jq aws-cli moreutils
+        ENTRYPOINT [ "sh", "-c", "bash ./scripts/create_dynamodb_tables.sh" ]
+      no_cache: true
+      context: ./docker/dynamodb
+    environment:
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - AWS_DEFAULT_REGION=ddblocal
+    volumes:
+      - "./docker/dynamodb/scripts:/scripts"
+    depends_on:
+      dynamodb:
+        condition: service_started
+    networks:
+      - feijoada-network
 
   redis:
     container_name: feijoada-redis

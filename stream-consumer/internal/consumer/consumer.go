@@ -15,12 +15,11 @@ import (
 )
 
 type Consumer struct {
-	stream     streambuffer.Stream
-	dynamo     *dynamo.Client
-	batchSize  int
-	interval   time.Duration
-	done       chan struct{}
-	processing chan struct{}
+	stream    streambuffer.Stream
+	dynamo    *dynamo.Client
+	batchSize int
+	interval  time.Duration
+	done      chan struct{}
 }
 
 func New(cfg *config.Config) (*Consumer, error) {
@@ -28,37 +27,35 @@ func New(cfg *config.Config) (*Consumer, error) {
 	dynamoClient := dynamo.New(cfg.DynamoDB)
 
 	// Create stream client
-	stream := streambuffer.New(cfg.Stream)
+	stream := streambuffer.New(cfg.Repository)
 
 	return &Consumer{
-		stream:     stream,
-		dynamo:     dynamoClient,
-		batchSize:  cfg.Consumer.BatchSize,
-		interval:   cfg.Consumer.Interval,
-		done:       make(chan struct{}),
-		processing: make(chan struct{}),
+		stream:    stream,
+		dynamo:    dynamoClient,
+		batchSize: cfg.Consumer.BatchSize,
+		interval:  cfg.Consumer.Interval,
+		done:      make(chan struct{}),
 	}, nil
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
-	ticker := time.NewTicker(c.interval)
-
 	for {
 		select {
 		case <-c.done:
 			return nil
 		case <-ctx.Done():
 			return nil
-		case <-ticker.C:
-			//TODO: parallel processing
-			defer func() {
-				<-c.processing
-			}()
-			c.processing <- struct{}{}
-			if err := c.processBatch(ctx); err != nil {
-				log.Error().Err(err).Msg("failed to process batch")
-			}
+		case <-time.After(c.interval):
+			log.Info().Time("time", time.Now()).Msg("tick!")
+			c.processTick(ctx)
 		}
+	}
+}
+
+func (c *Consumer) processTick(ctx context.Context) {
+	//TODO: parallel processing
+	if err := c.processBatch(ctx); err != nil {
+		log.Error().Err(err).Msg("failed to process batch")
 	}
 }
 
@@ -113,9 +110,9 @@ func (c *Consumer) processBatch(ctx context.Context) error {
 	var ackErr error
 	defer func() {
 		if ackErr == nil {
-			logEvent.Msg("message batch processed successfully")
+			log.Info().Dict("persistence", logEvent).Msg("message batch processed successfully")
 		} else {
-			logEvent.Err(ackErr).Msg("failed to process message batch")
+			log.Error().Dict("persistence", logEvent).Err(ackErr).Msg("failed to process message batch")
 		}
 	}()
 
@@ -129,8 +126,5 @@ func (c *Consumer) processBatch(ctx context.Context) error {
 }
 
 func (c *Consumer) Close() {
-	defer close(c.processing)
 	close(c.done)
-	// Wait for any ongoing processing to complete
-	c.processing <- struct{}{}
 }

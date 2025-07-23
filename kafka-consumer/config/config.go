@@ -31,7 +31,7 @@ type Consumer struct {
 	Log                         utilslog.Config `json:"log" koanf:"log"`
 	SchemaValidator             svcfg.Config    `json:"schemaValidator" koanf:"schemaValidator,required"`
 	Kafka                       Kafka           `json:"kafka" koanf:"kafka,required"`
-	Stream                      sbcfg.Config    `json:"stream" koanf:"stream,required"`
+	Repository                  sbcfg.Config    `json:"repository" koanf:"repository,required"`
 	MaxProcessRoutines          int             `json:"maxProcessRoutines" koanf:"maxProcessRoutines,required,gt=0"`
 	MaxPollRecords              int             `json:"maxPollRecords" koanf:"maxPollRecords,required,gt=0"`
 	PartitionRecordsChannelSize int             `json:"partitionRecordsChannelSize" koanf:"partitionRecordsChannelSize,required,gte=5"`

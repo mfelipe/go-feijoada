@@ -2,9 +2,16 @@
 sc:
   log:
     level: "debug"
+  consumer:
+    batchSize: 10
+    interval: 1s
   dynamoDB:
     tableName: "stream-consumer"
     retryWaitMax: 10s
     retryMax: 5
-  stream:
-    group: "stream-consumer"
+  repository:
+    stream:
+      name: "feijoada-stream"
+      group: "feijoada-stream-group"
+      readCount: 25
+      block:  100ms
