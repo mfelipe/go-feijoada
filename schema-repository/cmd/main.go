@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/tavsec/gin-healthcheck/checks"
 
 	healthcheck "github.com/tavsec/gin-healthcheck"
@@ -20,7 +20,7 @@ import (
 func main() {
 	select {
 	case <-startServer():
-		log.Info().Msg("server stopped")
+		zlog.Info().Msg("server stopped")
 	}
 }
 
@@ -59,7 +59,7 @@ func startServer() chan error {
 
 	// Start the server
 	serverAddr := fmt.Sprintf(":%d", cfg.Port)
-	log.Info().Msgf("starting server on %s", serverAddr)
+	zlog.Info().Msgf("starting server on %s", serverAddr)
 
 	run := make(chan error)
 	go func() {
