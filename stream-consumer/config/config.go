@@ -1,7 +1,7 @@
 package config
 
 import (
-	"embed"
+	_ "embed"
 	"time"
 
 	sbcfg "github.com/mfelipe/go-feijoada/stream-buffer/config"
@@ -10,17 +10,14 @@ import (
 )
 
 const (
-	Prefix = "SC"
+	prefix = "SC"
 )
 
 //go:embed base.yaml
-var baseCfg embed.FS
+var baseCfg []byte
 
 func Load() *Config {
-	var cfg Config
-	utilscfg.Load(Prefix, baseCfg, &cfg)
-
-	return &cfg
+	return utilscfg.Load[Config](prefix, baseCfg)
 }
 
 type Config struct {

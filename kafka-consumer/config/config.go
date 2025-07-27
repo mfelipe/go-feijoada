@@ -1,7 +1,7 @@
 package config
 
 import (
-	"embed"
+	_ "embed"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -13,17 +13,14 @@ import (
 )
 
 const (
-	Prefix = "KC"
+	prefix = "KC"
 )
 
 //go:embed base.yaml
-var baseCfg embed.FS
+var baseCfg []byte
 
 func Load() *Consumer {
-	var cfg Consumer
-	utilscfg.Load(Prefix, baseCfg, &cfg)
-
-	return &cfg
+	return utilscfg.Load[Consumer](prefix, baseCfg)
 }
 
 type Consumer struct {

@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	url = "http://127.0.0.1:8080"
+	baseUrl = "http://127.0.0.1:8080"
 )
 
 var tc *testContext
@@ -78,7 +78,7 @@ func setupTestContext() (*testContext, error) {
 	}()
 
 	// TODO: Get from config
-	healthCheckURL := url + hcconfig.DefaultConfig().HealthPath
+	healthCheckURL := baseUrl + hcconfig.DefaultConfig().HealthPath
 
 	for {
 		select {
@@ -147,7 +147,7 @@ func Test_AddSchema(t *testing.T) {
 			expectError:    false,
 		},
 		{
-			name:           "Invalid JSON schemaJSON",
+			name:           "Invalid JSON schema",
 			schemaName:     "user",
 			schemaVersion:  "1.0.0",
 			schemaJSON:     invalidJSONSchema,
@@ -166,15 +166,15 @@ func Test_AddSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := fmt.Sprintf("%s/schemas/%s/%s", url, tt.schemaName, tt.schemaVersion)
-			body := map[string]json.RawMessage{"schemaJSON": tt.schemaJSON}
+			url := fmt.Sprintf("%s/schemas/%s/%s", baseUrl, tt.schemaName, tt.schemaVersion)
+			body := map[string]json.RawMessage{"schema": tt.schemaJSON}
 			jsonBody, _ := json.Marshal(body)
 
 			resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonBody)))
 			if err != nil {
 				t.Fatalf("Failed to make request: %v", err)
 			}
-			defer resp.Body.Close()
+			defer closeBody(resp)
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -191,7 +191,7 @@ func Test_AddSchema(t *testing.T) {
 				}
 			} else {
 				if resp.ContentLength != 0 {
-					t.Error("Expected no schemaJSON in response, but it wasn't empty")
+					t.Error("Expected no schema in response, but it wasn't empty")
 				}
 			}
 		})
@@ -200,16 +200,18 @@ func Test_AddSchema(t *testing.T) {
 
 func Test_GetSchema(t *testing.T) {
 	// First create a schema to test retrieval
-	schemaName := "product"
-	version := "1.0.0"
-	createURL := fmt.Sprintf("%s/schemas/%s/%s", url, schemaName, version)
-	createBody := map[string]json.RawMessage{"schemaJSON": validSchemaV1}
-	jsonBody, _ := json.Marshal(createBody)
+	func() {
+		schemaName := "product"
+		version := "1.0.0"
+		createURL := fmt.Sprintf("%s/schemas/%s/%s", baseUrl, schemaName, version)
+		createBody := map[string]json.RawMessage{"schema": validSchemaV1}
+		jsonBody, _ := json.Marshal(createBody)
 
-	resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Failed to create test schema: %v", err)
-	}
+		resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
+		if err != nil || resp.StatusCode != http.StatusCreated {
+			t.Fatalf("Failed to create test schema: %v", err)
+		}
+	}()
 
 	tests := []struct {
 		name           string
@@ -243,19 +245,19 @@ func Test_GetSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := fmt.Sprintf("%s/schemas/%s/%s", url, tt.schemaName, tt.version)
+			url := fmt.Sprintf("%s/schemas/%s/%s", baseUrl, tt.schemaName, tt.version)
 			resp, err := http.Get(url)
 			if err != nil {
 				t.Fatalf("Failed to make request: %v", err)
 			}
-			defer resp.Body.Close()
+			defer closeBody(resp)
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
 			}
 
 			var response map[string]interface{}
-			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil && resp.StatusCode != http.StatusOK {
+			if err = json.NewDecoder(resp.Body).Decode(&response); err != nil && resp.StatusCode != http.StatusOK {
 				t.Fatalf("Failed to decode response: %v", err)
 			}
 
@@ -264,8 +266,8 @@ func Test_GetSchema(t *testing.T) {
 					t.Error("Expected error in response, but got none")
 				}
 			} else {
-				if _, hasContent := response["schemaJSON"]; !hasContent {
-					t.Error("Expected schemaJSON in response, but got none")
+				if _, hasContent := response["schema"]; !hasContent {
+					t.Error("Expected schema in response, but got none")
 				}
 			}
 		})
@@ -274,16 +276,18 @@ func Test_GetSchema(t *testing.T) {
 
 func Test_DeleteSchema(t *testing.T) {
 	// First create a schema to test deletion
-	schemaName := "toDelete"
-	version := "1.0.0"
-	createURL := fmt.Sprintf("%s/schemas/%s/%s", url, schemaName, version)
-	createBody := map[string]json.RawMessage{"schemaJSON": validSchemaV1}
-	jsonBody, _ := json.Marshal(createBody)
+	func() {
+		schemaName := "toDelete"
+		version := "1.0.0"
+		createURL := fmt.Sprintf("%s/schemas/%s/%s", baseUrl, schemaName, version)
+		createBody := map[string]json.RawMessage{"schema": validSchemaV1}
+		jsonBody, _ := json.Marshal(createBody)
 
-	resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Failed to create test schema: %v", err)
-	}
+		resp, err := http.Post(createURL, "application/json", strings.NewReader(string(jsonBody)))
+		if err != nil || resp.StatusCode != http.StatusCreated {
+			t.Fatalf("Failed to create test schema: %v", err)
+		}
+	}()
 
 	tests := []struct {
 		name           string
@@ -317,7 +321,7 @@ func Test_DeleteSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := fmt.Sprintf("%s/schemas/%s/%s", url, tt.schemaName, tt.version)
+			url := fmt.Sprintf("%s/schemas/%s/%s", baseUrl, tt.schemaName, tt.version)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			if err != nil {
 				t.Fatalf("Failed to create request: %v", err)
@@ -327,7 +331,7 @@ func Test_DeleteSchema(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to make request: %v", err)
 			}
-			defer resp.Body.Close()
+			defer closeBody(resp)
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -335,7 +339,7 @@ func Test_DeleteSchema(t *testing.T) {
 
 			if tt.expectError {
 				var response map[string]interface{}
-				if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+				if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)
 				}
 				if _, hasError := response["error"]; !hasError {
@@ -343,5 +347,11 @@ func Test_DeleteSchema(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func closeBody(body *http.Response) {
+	if body != nil && body.Body != nil {
+		_ = body.Body.Close()
 	}
 }
