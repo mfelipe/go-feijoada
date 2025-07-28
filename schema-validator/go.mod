@@ -18,7 +18,5 @@ require (
 	github.com/gotnospirit/messageformat v0.0.0-20221001023931-dfe49f1eb092 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/kaptinlin/go-i18n v0.1.4 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
-	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )
