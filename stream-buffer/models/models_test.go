@@ -138,7 +138,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			m.FromRedisValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
-			if _, ok := tt.args.v[timestampFieldName]; !ok {
+			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
@@ -243,7 +243,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			m.FromValkeyValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
-			if _, ok := tt.args.v[timestampFieldName]; !ok {
+			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
