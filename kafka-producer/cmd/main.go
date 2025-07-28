@@ -9,7 +9,7 @@ import (
 	"github.com/mfelipe/go-feijoada/schemas/models/v1_0_0"
 	"github.com/mfelipe/go-feijoada/schemas/models/v2_0_0"
 	utilslog "github.com/mfelipe/go-feijoada/utils/log"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"os"
 	"os/signal"
@@ -28,32 +28,32 @@ func main() {
 		kgo.SeedBrokers(strings.Split(cfg.Kafka.Brokers, ",")...),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create kafka client")
+		zlog.Fatal().Err(err).Msg("failed to create kafka client")
 	}
 	defer client.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	log.Info().Msg("Starting kafka producer...")
+	zlog.Info().Msg("Starting kafka producer...")
 
 	for {
 		time.Sleep(100 * time.Millisecond)
 		select {
 		case <-ctx.Done():
-			log.Info().Msg("Shutting down kafka producer...")
+			zlog.Info().Msg("Shutting down kafka producer...")
 			return
 		default:
 			record, err := newRecord()
 			if err != nil {
-				log.Error().Err(err).Msg("failed to create new record")
+				zlog.Error().Err(err).Msg("failed to create new record")
 				continue
 			}
 
-			log.Info().Str("topic", record.Topic).Msg("Producing record")
+			zlog.Info().Str("topic", record.Topic).Msg("Producing record")
 			client.Produce(ctx, record, func(r *kgo.Record, err error) {
 				if err != nil {
-					log.Error().Err(err).Msg("failed to produce record")
+					zlog.Error().Err(err).Msg("failed to produce record")
 				}
 			})
 		}
@@ -65,7 +65,7 @@ func newRecord() (*kgo.Record, error) {
 
 	modelBytes, err := json.Marshal(&model)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to marshal model")
+		zlog.Error().Err(err).Msg("failed to marshal model")
 		return nil, err
 	}
 
@@ -132,7 +132,7 @@ func generateModel() (model any, name string, version string) {
 func newFakeModel[T any]() any {
 	var model T
 	if err := gofakeit.Struct(&model); err != nil {
-		log.Error().Err(err).Msg("failed to create fake model")
+		zlog.Error().Err(err).Msg("failed to create fake model")
 		return nil
 	}
 	return model

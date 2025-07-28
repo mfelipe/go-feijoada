@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/mfelipe/go-feijoada/stream-buffer"
 	"github.com/mfelipe/go-feijoada/stream-consumer/config"
@@ -46,7 +46,6 @@ func (c *Consumer) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(c.interval):
-			log.Info().Time("time", time.Now()).Msg("tick!")
 			c.processTick(ctx)
 		}
 	}
@@ -55,7 +54,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 func (c *Consumer) processTick(ctx context.Context) {
 	//TODO: parallel processing
 	if err := c.processBatch(ctx); err != nil {
-		log.Error().Err(err).Msg("failed to process batch")
+		zlog.Error().Err(err).Msg("failed to process batch")
 	}
 }
 
@@ -67,7 +66,7 @@ func (c *Consumer) processBatch(ctx context.Context) error {
 	}
 
 	if len(messages) == 0 {
-		log.Info().Msg("no messages were read from the stream")
+		zlog.Info().Msg("no messages were read from the stream")
 		return nil
 	}
 
@@ -93,13 +92,13 @@ func (c *Consumer) processBatch(ctx context.Context) error {
 			err = fmt.Errorf("no items were persisted but client didn't throw any error")
 		}
 
-		log.Error().Err(err).Array("unpersistedStreamIds", unpersistedLogEvent).Msg("failed to batch write items to DynamoDB")
+		zlog.Error().Err(err).Array("unpersistedStreamIds", unpersistedLogEvent).Msg("failed to batch write items to DynamoDB")
 		return err
 	}
 
 	// Log unpersisted messages, if any
 	if len(unpersisted) > 0 {
-		log.Error().Err(err).Array("unpersistedStreamIds", unpersistedLogEvent).Msg("failed to write one of more items to DynamoDB")
+		zlog.Error().Err(err).Array("unpersistedStreamIds", unpersistedLogEvent).Msg("failed to write one of more items to DynamoDB")
 	}
 
 	logEvent := zerolog.Dict().
@@ -110,15 +109,15 @@ func (c *Consumer) processBatch(ctx context.Context) error {
 	var ackErr error
 	defer func() {
 		if ackErr == nil {
-			log.Info().Dict("persistence", logEvent).Msg("message batch processed successfully")
+			zlog.Info().Dict("persistence", logEvent).Msg("message batch processed successfully")
 		} else {
-			log.Error().Dict("persistence", logEvent).Err(ackErr).Msg("failed to process message batch")
+			zlog.Error().Dict("persistence", logEvent).Err(ackErr).Msg("failed to process message batch")
 		}
 	}()
 
 	// Acknowledge messages in stream
 	if ackErr = c.stream.Ack(ctx, persisted...); ackErr != nil {
-		log.Info().Array("persisted stream ids", persistedLogEvent).Msg("failed to acknowledge messages in the stream")
+		zlog.Info().Array("persisted stream ids", persistedLogEvent).Msg("failed to acknowledge messages in the stream")
 		return ackErr
 	}
 

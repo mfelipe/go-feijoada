@@ -2,7 +2,6 @@ package testcontainers
 
 import (
 	"context"
-	_ "embed"
 
 	"github.com/testcontainers/testcontainers-go"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"

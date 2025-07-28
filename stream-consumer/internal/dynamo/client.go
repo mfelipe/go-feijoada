@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 	sccfg "github.com/mfelipe/go-feijoada/stream-consumer/config"
@@ -25,7 +25,7 @@ type Client struct {
 func New(cfg sccfg.DynamoDB) *Client {
 	awsCfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to load default AWS SDK config")
+		zlog.Fatal().Err(err).Msg("failed to load default AWS SDK config")
 	}
 
 	var options []func(*dynamodb.Options)

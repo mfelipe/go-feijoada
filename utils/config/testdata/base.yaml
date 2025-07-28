@@ -1,0 +1,8 @@
+cfg:
+  server:
+    port: 8080
+    host: ws.example.com
+    timeout: 30
+    database:
+      host: db.example.com
+      port: 5432

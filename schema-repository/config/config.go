@@ -1,26 +1,20 @@
 package config
 
 import (
-	"path/filepath"
-
+	_ "embed"
 	utilscfg "github.com/mfelipe/go-feijoada/utils/config"
 	utilslog "github.com/mfelipe/go-feijoada/utils/log"
 )
 
 const (
-	Prefix = "SR"
+	prefix = "SR"
 )
 
+//go:embed base.yaml
+var baseCfg []byte
+
 func Load() *Server {
-	path, err := filepath.Abs("../config/base.yaml")
-	if err != nil {
-		panic(err)
-	}
-
-	var cfg Server
-	utilscfg.Load[Server](Prefix, path, &cfg)
-
-	return &cfg
+	return utilscfg.Load[Server](prefix, baseCfg)
 }
 
 type Server struct {

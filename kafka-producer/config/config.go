@@ -1,7 +1,7 @@
 package config
 
 import (
-	"path/filepath"
+	_ "embed"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -11,18 +11,14 @@ import (
 )
 
 const (
-	Prefix = "KP"
+	prefix = "KP"
 )
 
-func Load() *Consumer {
-	path, err := filepath.Abs("../config/base.yaml")
-	if err != nil {
-		panic(err)
-	}
-	var cfg Consumer
-	utilscfg.Load[Consumer](Prefix, path, &cfg)
+//go:embed base.yaml
+var baseCfg []byte
 
-	return &cfg
+func Load() *Consumer {
+	return utilscfg.Load[Consumer](prefix, baseCfg)
 }
 
 type Consumer struct {

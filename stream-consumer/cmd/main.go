@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/mfelipe/go-feijoada/stream-consumer/config"
 	"github.com/mfelipe/go-feijoada/stream-consumer/internal/consumer"
@@ -22,7 +22,7 @@ func main() {
 	// Create consumer
 	w, err := consumer.New(cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create consumer")
+		zlog.Fatal().Err(err).Msg("failed to create consumer")
 	}
 
 	// Setup context with cancellation
@@ -35,18 +35,18 @@ func main() {
 
 	go func() {
 		sig := <-sigChan
-		log.Info().Str("signal", sig.String()).Msg("received shutdown signal")
+		zlog.Info().Str("signal", sig.String()).Msg("received shutdown signal")
 		cancel()
 	}()
 
 	// Start the consumer
-	log.Info().Msg("starting Stream Consumer...")
+	zlog.Info().Msg("starting Stream Consumer...")
 	if err = w.Start(ctx); err != nil {
-		log.Fatal().Err(err).Msg("consumer failed")
+		zlog.Fatal().Err(err).Msg("consumer failed")
 	}
 
 	// Close consumer
 	w.Close()
 
-	log.Info().Msg("Stream Consumer shutdown complete")
+	zlog.Info().Msg("Stream Consumer shutdown complete")
 }

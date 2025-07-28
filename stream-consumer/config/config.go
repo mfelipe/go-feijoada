@@ -1,7 +1,7 @@
 package config
 
 import (
-	"path/filepath"
+	_ "embed"
 	"time"
 
 	sbcfg "github.com/mfelipe/go-feijoada/stream-buffer/config"
@@ -10,18 +10,14 @@ import (
 )
 
 const (
-	Prefix = "SC"
+	prefix = "SC"
 )
 
-func Load() *Config {
-	path, err := filepath.Abs("../config/base.yaml")
-	if err != nil {
-		panic(err)
-	}
-	var cfg Config
-	utilscfg.Load[Config](Prefix, path, &cfg)
+//go:embed base.yaml
+var baseCfg []byte
 
-	return &cfg
+func Load() *Config {
+	return utilscfg.Load[Config](prefix, baseCfg)
 }
 
 type Config struct {

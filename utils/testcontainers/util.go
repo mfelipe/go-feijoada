@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/testcontainers/testcontainers-go"
 )
 
 func validateContainerStart(ctx context.Context, container testcontainers.Container, runErr error) {
 	if runErr != nil {
-		log.Err(runErr).Msg("failed to start container")
+		zlog.Err(runErr).Msg("failed to start container")
 		if container != nil {
 			runErr = errors.Join(runErr, container.Terminate(ctx))
 		}
@@ -19,10 +19,10 @@ func validateContainerStart(ctx context.Context, container testcontainers.Contai
 
 	state, err := container.State(ctx)
 	if err != nil {
-		log.Err(err).Msg("failed to get container state")
+		zlog.Err(err).Msg("failed to get container state")
 		err = errors.Join(err, container.Terminate(ctx))
 		panic(err)
 	}
 
-	log.Info().Msgf("%T status: %s", container, state.Status)
+	zlog.Info().Msgf("%T status: %s", container, state.Status)
 }

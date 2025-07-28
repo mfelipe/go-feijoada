@@ -29,7 +29,7 @@ func TestMessage_ExpectedFields(t *testing.T) {
 }
 
 func TestMessage_FromRedisValue(t *testing.T) {
-	testTime := time.Now()
+	testTime := time.Now().UTC().Truncate(time.Second) // Truncate to match RFC3339 format
 	formattedTime := testTime.Format(defaultTSFormat)
 
 	type args struct {
@@ -46,14 +46,14 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			args{map[string]any{
 				originFieldName:    "some origin",
 				schemaFieldName:    "some schema",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second), // Truncate to match RFC3339 format
 			},
 			true,
 			false,
@@ -61,13 +61,13 @@ func TestMessage_FromRedisValue(t *testing.T) {
 		{"Missing origin",
 			args{map[string]any{
 				schemaFieldName:    "some schema",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 			false,
@@ -75,13 +75,13 @@ func TestMessage_FromRedisValue(t *testing.T) {
 		{"Missing schemaURI",
 			args{map[string]any{
 				originFieldName:    "some origin",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				Origin:    "some origin",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 			false,
@@ -95,8 +95,8 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(""),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 			false,
@@ -138,7 +138,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			m.FromRedisValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
-			if _, ok := tt.args.v[timestampFieldName]; !ok {
+			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
@@ -155,7 +155,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 }
 
 func TestMessage_FromValkeyValue(t *testing.T) {
-	testTime := time.Now()
+	testTime := time.Now().UTC().Truncate(time.Second) // Truncate to match RFC3339 format
 	formattedTime := testTime.Format(defaultTSFormat)
 
 	type args struct {
@@ -171,40 +171,40 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			args{map[string]string{
 				originFieldName:    "some origin",
 				schemaFieldName:    "some schema",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			true,
 		},
 		{"Missing origin",
 			args{map[string]string{
 				schemaFieldName:    "some schema",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 		},
 		{"Missing schemaURI",
 			args{map[string]string{
 				originFieldName:    "some origin",
-				dataFieldName:      `{"some":"json"}`,
 				timestampFieldName: formattedTime,
+				dataFieldName:      `{"some":"json"}`,
 			}},
 			Message{
 				Origin:    "some origin",
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 		},
@@ -217,8 +217,8 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
+				Timestamp: testTime,
 				Data:      json.RawMessage(""),
-				Timestamp: testTime.Truncate(time.Second),
 			},
 			false,
 		},
@@ -243,7 +243,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			m.FromValkeyValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
-			if _, ok := tt.args.v[timestampFieldName]; !ok {
+			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
@@ -260,12 +260,12 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 }
 
 func TestMessage_Iter(t *testing.T) {
-	testTime := time.Now().Truncate(time.Second)
+	testTime := time.Now().UTC().Truncate(time.Second)
 	msg := &Message{
 		Origin:    "test-origin",
 		SchemaURI: "test-schema",
-		Data:      json.RawMessage(`{"test":"data"}`),
 		Timestamp: testTime,
+		Data:      json.RawMessage(`{"test":"data"}`),
 	}
 
 	// Create a map to track which fields we've seen
@@ -294,7 +294,7 @@ func TestMessage_Iter(t *testing.T) {
 }
 
 func TestMessage_ToValue(t *testing.T) {
-	testTime := time.Now().Truncate(time.Second)
+	testTime := time.Now().UTC().Truncate(time.Second)
 	tests := []struct {
 		name     string
 		message  Message
@@ -311,8 +311,8 @@ func TestMessage_ToValue(t *testing.T) {
 			expected: []string{
 				originFieldName, "test-origin",
 				schemaFieldName, "test-schema",
-				dataFieldName, `{"test":"data"}`,
 				timestampFieldName, testTime.Format(defaultTSFormat),
+				dataFieldName, `{"test":"data"}`,
 			},
 		},
 		{
@@ -320,14 +320,14 @@ func TestMessage_ToValue(t *testing.T) {
 			message: Message{
 				Origin:    "",
 				SchemaURI: "",
-				Data:      json.RawMessage(``),
 				Timestamp: time.Time{},
+				Data:      json.RawMessage(``),
 			},
 			expected: []string{
 				originFieldName, "",
 				schemaFieldName, "",
-				dataFieldName, ``,
 				timestampFieldName, time.Time{}.Format(defaultTSFormat),
+				dataFieldName, ``,
 			},
 		},
 	}
@@ -343,8 +343,8 @@ func TestMessage_ToValue(t *testing.T) {
 			// Verify field names are in the correct positions
 			assert.Equal(t, originFieldName, got[0], "First element should be origin field name")
 			assert.Equal(t, schemaFieldName, got[2], "Third element should be schema field name")
-			assert.Equal(t, dataFieldName, got[4], "Fifth element should be data field name")
-			assert.Equal(t, timestampFieldName, got[6], "Seventh element should be timestamp field name")
+			assert.Equal(t, timestampFieldName, got[4], "Seventh element should be timestamp field name")
+			assert.Equal(t, dataFieldName, got[6], "Fifth element should be data field name")
 		})
 	}
 }

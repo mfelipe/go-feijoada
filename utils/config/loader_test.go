@@ -1,12 +1,17 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
+	_ "embed"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+//go:embed testdata/base.yaml
+var baseConfigFileContent []byte
+
+//go:embed testdata/bad.yaml
+var badBaseConfigFileContent []byte
 
 type TestConfig struct {
 	Server struct {
@@ -22,25 +27,9 @@ type TestConfig struct {
 
 func TestLoad(t *testing.T) {
 	prefix := "CFG"
-	// Create a temporary YAML file for testing
-	yamlContent := `
-cfg:
-  server:
-    port: 8080
-    host: ws.example.com
-    timeout: 30
-    database:
-      host: db.example.com
-      port: 5432
-`
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
-	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
-	assert.NoError(t, err)
 
 	t.Run("Load from YAML file", func(t *testing.T) {
-		var cfg TestConfig
-		Load[TestConfig](prefix, configPath, &cfg)
+		cfg := Load[TestConfig](prefix, baseConfigFileContent)
 
 		// Verify YAML values were loaded correctly
 		assert.Equal(t, 8080, cfg.Server.Port)
@@ -55,8 +44,7 @@ cfg:
 		t.Setenv(prefix+"_SERVER_TIMEOUT", "60")
 		t.Setenv(prefix+"_SERVER_DATABASE_PORT", "3254")
 
-		var cfg TestConfig
-		Load[TestConfig](prefix, configPath, &cfg)
+		cfg := Load[TestConfig](prefix, baseConfigFileContent)
 
 		// Verify environment variables override YAML values
 		assert.Equal(t, "db.example.com", cfg.Server.Database.Host) // Not overridden
@@ -66,14 +54,14 @@ cfg:
 		assert.Equal(t, 60, cfg.Server.Timeout)
 	})
 
-	t.Run("Invalid YAML file path", func(t *testing.T) {
+	t.Run("Invalid YAML", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
-				t.Error("Expected Load to panic with invalid file path")
+				t.Error("Expected Load to panic with invalid yaml")
 			}
 		}()
-		var cfg TestConfig
-		Load[TestConfig](prefix, "nonexistent.yaml", &cfg)
+
+		Load[TestConfig](prefix, badBaseConfigFileContent)
 	})
 
 	t.Run("Invalid environment variable type", func(t *testing.T) {
@@ -84,7 +72,7 @@ cfg:
 				t.Error("Expected Load to panic with invalid environment variable type")
 			}
 		}()
-		var cfg TestConfig
-		Load[TestConfig](prefix, configPath, &cfg)
+
+		Load[TestConfig](prefix, baseConfigFileContent)
 	})
 }

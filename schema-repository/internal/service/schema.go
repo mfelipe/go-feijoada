@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/mfelipe/go-feijoada/schema-repository/config"
 	"github.com/mfelipe/go-feijoada/schema-repository/internal/models"
@@ -32,11 +32,13 @@ func NewSchemaService(cfg config.RepoData, r repository.Repository) *SchemaServi
 
 // AddSchema adds a new schema or a new version of an existing schema.
 func (s *SchemaService) AddSchema(ctx context.Context, name string, version models.Semver, schema json.RawMessage) error {
+	zlog.Debug().Msgf("Adding schema: %s, version: %s", name, version.String())
 	return s.r.Set(ctx, s.schemaKey(name, version), string(schema))
 }
 
 // DeleteSchema removes a specific version of a schema
 func (s *SchemaService) DeleteSchema(ctx context.Context, name string, version models.Semver) error {
+	zlog.Debug().Msgf("Removing schema: %s, version: %s", name, version.String())
 	err := s.r.Del(ctx, s.schemaKey(name, version))
 
 	if err != nil && err.Error() == repository.ErrorKeyNotFound {
@@ -48,6 +50,7 @@ func (s *SchemaService) DeleteSchema(ctx context.Context, name string, version m
 
 // GetSchema retrieves a specific version of a schema.
 func (s *SchemaService) GetSchema(ctx context.Context, name string, version models.Semver) (json.RawMessage, error) {
+	zlog.Debug().Msgf("Getting schema: %s, version: %s", name, version.String())
 	schema, err := s.r.Get(ctx, s.schemaKey(name, version))
 
 	if err != nil && err.Error() == repository.ErrorKeyNotFound {
@@ -68,9 +71,9 @@ func safeToRawMessage(schema string) (rm json.RawMessage, e error) {
 			e = errors.New(ErrorInvalidJSONSchema)
 			switch err := r.(type) {
 			case error:
-				log.Err(err).Msgf("%s: %s", ErrorInvalidJSONSchema, r)
+				zlog.Err(err).Msgf("%s: %s", ErrorInvalidJSONSchema, r)
 			default:
-				log.Error().Msgf("%s: %s", ErrorInvalidJSONSchema, err)
+				zlog.Error().Msgf("%s: %s", ErrorInvalidJSONSchema, err)
 			}
 		}
 	}()

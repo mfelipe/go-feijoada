@@ -5,7 +5,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/mfelipe/go-feijoada/kafka-consumer/config"
 	"github.com/mfelipe/go-feijoada/kafka-consumer/internal"
@@ -24,34 +24,34 @@ func main() {
 	stopped := make(chan byte)
 	go func() {
 		defer close(stopped)
-		log.Info().Msg("starting kafka message polling...")
+		zlog.Info().Msg("starting kafka message polling...")
 		consumer.Poll()
 	}()
 
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, os.Interrupt, os.Kill)
 
-	log.Info().Msg("kafka consumer is live!")
+	zlog.Info().Msg("kafka consumer is live!")
 
 	done := make(chan struct{})
 	select {
 	case <-sigs:
-		log.Info().Msg("received interrupt signal. Stopping polling...")
+		zlog.Info().Msg("received interrupt signal. Stopping polling...")
 		go func() {
 			defer close(done)
 			consumer.Close()
 		}()
 	case <-stopped:
-		log.Info().Msg("kafka polling stopped. Exiting...")
+		zlog.Info().Msg("kafka polling stopped. Exiting...")
 		return
 	}
 
 	select {
 	case <-time.After(time.Minute):
-		log.Info().Msg("kafka consumer polling stop timeout; quitting without waiting for graceful shutdown")
+		zlog.Info().Msg("kafka consumer polling stop timeout; quitting without waiting for graceful shutdown")
 	case <-sigs:
-		log.Info().Msg("received second interrupt signal; quitting without waiting for graceful shutdown")
+		zlog.Info().Msg("received second interrupt signal; quitting without waiting for graceful shutdown")
 	case <-done:
-		log.Info().Msg("kafka consumer was gracefully shutdown")
+		zlog.Info().Msg("kafka consumer was gracefully shutdown")
 	}
 }
