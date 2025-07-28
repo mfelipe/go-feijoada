@@ -46,14 +46,14 @@ func (m *Message) FromRedisValue(v map[string]any) {
 	m.SchemaURI = f(schemaFieldName)
 
 	ts := f(timestampFieldName)
-	m.Timestamp, _ = time.ParseInLocation(defaultTSFormat, ts, time.Local)
+	m.Timestamp, _ = time.Parse(defaultTSFormat, ts)
 }
 
 func (m *Message) FromValkeyValue(v map[string]string) {
 	m.Data = json.RawMessage(v[dataFieldName])
 	m.Origin = v[originFieldName]
 	m.SchemaURI = v[schemaFieldName]
-	m.Timestamp, _ = time.ParseInLocation(defaultTSFormat, v[timestampFieldName], time.Local)
+	m.Timestamp, _ = time.Parse(defaultTSFormat, v[timestampFieldName])
 }
 
 func (m *Message) ToValue() []string {

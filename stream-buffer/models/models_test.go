@@ -29,7 +29,7 @@ func TestMessage_ExpectedFields(t *testing.T) {
 }
 
 func TestMessage_FromRedisValue(t *testing.T) {
-	testTime := time.Now()
+	testTime := time.Now().UTC().Truncate(time.Second) // Truncate to match RFC3339 format
 	formattedTime := testTime.Format(defaultTSFormat)
 
 	type args struct {
@@ -52,7 +52,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second), // Truncate to match RFC3339 format
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			true,
@@ -66,7 +66,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			}},
 			Message{
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			false,
@@ -80,7 +80,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			}},
 			Message{
 				Origin:    "some origin",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			false,
@@ -95,7 +95,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(""),
 			},
 			false,
@@ -155,7 +155,7 @@ func TestMessage_FromRedisValue(t *testing.T) {
 }
 
 func TestMessage_FromValkeyValue(t *testing.T) {
-	testTime := time.Now()
+	testTime := time.Now().UTC().Truncate(time.Second) // Truncate to match RFC3339 format
 	formattedTime := testTime.Format(defaultTSFormat)
 
 	type args struct {
@@ -177,7 +177,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			true,
@@ -190,7 +190,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			}},
 			Message{
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			false,
@@ -203,7 +203,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			}},
 			Message{
 				Origin:    "some origin",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(`{"some":"json"}`),
 			},
 			false,
@@ -217,7 +217,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 			Message{
 				Origin:    "some origin",
 				SchemaURI: "some schema",
-				Timestamp: testTime.Truncate(time.Second),
+				Timestamp: testTime,
 				Data:      json.RawMessage(""),
 			},
 			false,
@@ -260,7 +260,7 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 }
 
 func TestMessage_Iter(t *testing.T) {
-	testTime := time.Now().Truncate(time.Second)
+	testTime := time.Now().UTC().Truncate(time.Second)
 	msg := &Message{
 		Origin:    "test-origin",
 		SchemaURI: "test-schema",
@@ -294,7 +294,7 @@ func TestMessage_Iter(t *testing.T) {
 }
 
 func TestMessage_ToValue(t *testing.T) {
-	testTime := time.Now().Truncate(time.Second)
+	testTime := time.Now().UTC().Truncate(time.Second)
 	tests := []struct {
 		name     string
 		message  Message
