@@ -343,8 +343,8 @@ func TestMessage_ToValue(t *testing.T) {
 			// Verify field names are in the correct positions
 			assert.Equal(t, originFieldName, got[0], "First element should be origin field name")
 			assert.Equal(t, schemaFieldName, got[2], "Third element should be schema field name")
-			assert.Equal(t, timestampFieldName, got[4], "Seventh element should be timestamp field name")
-			assert.Equal(t, dataFieldName, got[6], "Fifth element should be data field name")
+			assert.Equal(t, timestampFieldName, got[4], "Fifth element should be timestamp field name")
+			assert.Equal(t, dataFieldName, got[6], "Seventh element should be data field name")
 		})
 	}
 }

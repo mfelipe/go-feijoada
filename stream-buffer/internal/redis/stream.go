@@ -3,14 +3,17 @@ package redis
 import (
 	"context"
 	"errors"
-	zlog "github.com/rs/zerolog/log"
 	"sync"
+
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/mfelipe/go-feijoada/stream-buffer/config"
 	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
+
+const nilResult = "got an unexpected nil result from stream operation"
 
 type client interface {
 	XAdd(ctx context.Context, a *redis.XAddArgs) *redis.StringCmd
@@ -19,6 +22,7 @@ type client interface {
 	XReadGroup(ctx context.Context, a *redis.XReadGroupArgs) *redis.XStreamSliceCmd
 }
 
+//goland:noinspection GoExportedFuncWithUnexportedType
 func New(serverCfg config.Server, streamCfg config.Stream) *stream {
 	s := stream{
 		cfg:          streamCfg,
@@ -91,7 +95,7 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 	})
 
 	if result == nil {
-		return nil, errors.New(models.NilResult)
+		return nil, errors.New(nilResult)
 	}
 
 	xStreams, err := result.Result()
@@ -130,7 +134,7 @@ type cmdErr interface {
 func resultError[T cmdErr](result T) error {
 	var err error
 	if result == nil {
-		err = errors.New(models.NilResult)
+		err = errors.New(nilResult)
 	} else {
 		err = result.Err()
 	}

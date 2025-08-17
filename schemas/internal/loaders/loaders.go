@@ -2,11 +2,12 @@ package loaders
 
 import (
 	"errors"
+
 	pkgschemas "github.com/atombender/go-jsonschema/pkg/schemas"
 )
 
 var (
-	ErrCannotLoadSchema = errors.New("cannot load schema")
+	errCannotLoadSchema = errors.New("cannot load schema")
 )
 
 func NewCachedFileLoader() *CachedFileLoader {
@@ -28,7 +29,7 @@ func (l *CachedFileLoader) Load(fileName, parentFileName string) (*pkgschemas.Sc
 
 	schema, err := l.loader.Load(fileName, parentFileName)
 	if err != nil {
-		return nil, errors.Join(ErrCannotLoadSchema, err)
+		return nil, errors.Join(errCannotLoadSchema, err)
 	}
 
 	l.cache[fileName] = schema
