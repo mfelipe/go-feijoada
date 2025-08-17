@@ -95,6 +95,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
 
       - name: Build and test project
         run: |
@@ -122,6 +123,8 @@ jobs:
   create-manual-release:
     needs: [validate-inputs, build-and-test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
