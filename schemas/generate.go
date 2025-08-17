@@ -3,13 +3,14 @@ package main
 import (
 	"embed"
 	"fmt"
-	"github.com/atombender/go-jsonschema/pkg/generator"
-	"github.com/mfelipe/go-feijoada/schemas/internal/loaders"
 	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/atombender/go-jsonschema/pkg/generator"
+	"github.com/mfelipe/go-feijoada/schemas/internal/loaders"
 )
 
 //go:embed schemas/*.json

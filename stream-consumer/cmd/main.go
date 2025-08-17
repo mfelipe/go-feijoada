@@ -20,7 +20,7 @@ func main() {
 	utilslog.InitializeGlobal(cfg.Log)
 
 	// Create consumer
-	w, err := consumer.New(cfg)
+	c, err := consumer.New(cfg)
 	if err != nil {
 		zlog.Fatal().Err(err).Msg("failed to create consumer")
 	}
@@ -41,12 +41,12 @@ func main() {
 
 	// Start the consumer
 	zlog.Info().Msg("starting Stream Consumer...")
-	if err = w.Start(ctx); err != nil {
+	if err = c.Start(ctx); err != nil {
 		zlog.Fatal().Err(err).Msg("consumer failed")
 	}
 
 	// Close consumer
-	w.Close()
+	c.Close()
 
 	zlog.Info().Msg("Stream Consumer shutdown complete")
 }

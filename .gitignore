@@ -1,2 +1,5 @@
 .idea
+.kiro
+.vscode
 /docker/dynamodb/data/
+**/coverage.out

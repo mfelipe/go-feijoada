@@ -1,0 +1,329 @@
+name: Manual Release Override
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Library project to release'
+        required: true
+        type: choice
+        options:
+          - utils
+          - stream-buffer
+          - schemas
+          - schema-validator
+      version:
+        description: 'Version to release (e.g., 1.2.3)'
+        required: true
+        type: string
+      version_type:
+        description: 'Type of version increment'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - custom
+        default: patch
+      release_notes:
+        description: 'Custom release notes (optional)'
+        required: false
+        type: string
+
+env:
+  GO_VERSION: '1.24.3'
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      tag-name: ${{ steps.validate.outputs.tag-name }}
+      version-valid: ${{ steps.validate.outputs.version-valid }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate inputs
+        id: validate
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          echo "🔍 Validating manual release inputs..."
+          echo "📋 Project: $PROJECT"
+          echo "📋 Version: $VERSION"
+          echo "📋 Version Type: $VERSION_TYPE"
+          
+          # Validate project exists
+          if [ ! -d "$PROJECT" ]; then
+            echo "❌ Project directory '$PROJECT' does not exist"
+            exit 1
+          fi
+          
+          # Validate version format
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid version format. Expected: X.Y.Z (e.g., 1.2.3)"
+            exit 1
+          fi
+          
+          TAG_NAME="${PROJECT}/v${VERSION}"
+          echo "🏷️ Target tag: $TAG_NAME"
+          
+          # Check if tag already exists
+          if git tag -l | grep -q "^$TAG_NAME$"; then
+            echo "❌ Tag $TAG_NAME already exists!"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "version-valid=true" >> $GITHUB_OUTPUT
+
+  build-and-test:
+    needs: validate-inputs
+    if: needs.validate-inputs.outputs.version-valid == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build and test project
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          
+          echo "🔨 Building and testing $PROJECT..."
+          
+          cd "$PROJECT"
+          
+          # Download dependencies
+          echo "📦 Downloading dependencies..."
+          go mod download
+          go mod verify
+          
+          # Build project
+          echo "🏗️ Building project..."
+          go build -v ./...
+          
+          # Run tests
+          echo "🧪 Running tests..."
+          go test -v -race ./...
+          
+          echo "✅ Build and test completed successfully"
+
+  create-manual-release:
+    needs: [validate-inputs, build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          CUSTOM_NOTES="${{ github.event.inputs.release_notes }}"
+          
+          echo "📝 Generating release notes for manual release..."
+          
+          RELEASE_NOTES_FILE="manual-release-notes-$PROJECT.md"
+          
+          if [ -n "$CUSTOM_NOTES" ]; then
+            echo "Using custom release notes provided by user"
+            cat > "$RELEASE_NOTES_FILE" << EOF
+          # $PROJECT v$VERSION (Manual Release)
+          
+          $CUSTOM_NOTES
+          
+          ## Release Information
+          
+          - **Release Type:** Manual Override
+          - **Version Type:** $VERSION_TYPE
+          - **Released By:** @${{ github.actor }}
+          - **Release Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          ---
+          
+          This release was created manually using GitHub Actions workflow dispatch.
+          EOF
+          else
+            echo "Generating automatic release notes"
+            
+            # Find the last tag for this project
+            LAST_TAG=$(git tag -l "${PROJECT}/v*" --sort=-version:refname | head -n1)
+            
+            cat > "$RELEASE_NOTES_FILE" << EOF
+          # $PROJECT v$VERSION (Manual Release)
+          
+          ## What's Changed
+          
+          This is a manual release created by @${{ github.actor }}.
+          
+          EOF
+            
+            if [ -n "$LAST_TAG" ]; then
+              echo "📋 Analyzing changes since $LAST_TAG"
+              
+              COMMITS=$(git log --oneline --no-merges "$LAST_TAG..HEAD" -- "$PROJECT/" | head -20)
+              
+              if [ -n "$COMMITS" ]; then
+                echo "### Recent Changes" >> "$RELEASE_NOTES_FILE"
+                echo "" >> "$RELEASE_NOTES_FILE"
+                echo "$COMMITS" | sed 's/^[a-f0-9]* /- /' >> "$RELEASE_NOTES_FILE"
+                echo "" >> "$RELEASE_NOTES_FILE"
+              else
+                echo "- No commits found since last release" >> "$RELEASE_NOTES_FILE"
+                echo "" >> "$RELEASE_NOTES_FILE"
+              fi
+            else
+              echo "- Initial release of $PROJECT" >> "$RELEASE_NOTES_FILE"
+              echo "" >> "$RELEASE_NOTES_FILE"
+            fi
+            
+            cat >> "$RELEASE_NOTES_FILE" << EOF
+          ## Release Information
+          
+          - **Release Type:** Manual Override
+          - **Version Type:** $VERSION_TYPE
+          - **Released By:** @${{ github.actor }}
+          - **Release Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Previous Version:** $LAST_TAG
+          
+          ---
+          
+          This release was created manually using GitHub Actions workflow dispatch.
+          EOF
+          fi
+          
+          echo "✅ Release notes generated:"
+          cat "$RELEASE_NOTES_FILE"
+          
+          echo "release-notes-file=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
+
+      - name: Build project artifacts
+        id: build-artifacts
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          VERSION="${{ github.event.inputs.version }}"
+          
+          echo "🔨 Building artifacts for manual release of $PROJECT"
+          
+          cd "$PROJECT"
+          
+          # Build the project
+          echo "Building $PROJECT..."
+          go build -v ./...
+          
+          # Create artifacts directory
+          mkdir -p "../artifacts/$PROJECT"
+          
+          # Copy relevant files
+          echo "Collecting artifacts for $PROJECT..."
+          
+          # Copy all relevant files except test files
+          find . -type f \( -name "go.mod" -o -name "go.sum" -o -name "*.md" \
+          -o \( \( -name "*.go" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) \
+          ! -name "*_test.go" ! -name "test_*.go" ! -name "*_test.json" ! -name "test_*.json" \
+          ! -path "*/test/*" ! -path "*/testdata/*" \) \) \
+          -exec cp --parents {} "../artifacts/$PROJECT/" \; 2>/dev/null || true
+          
+          # Create a tarball of the artifacts
+          cd "../artifacts"
+          tar -czf "$PROJECT-$VERSION-manual.tar.gz" "$PROJECT/"
+          
+          echo "✅ Manual release artifacts created for $PROJECT"
+          ls -la "$PROJECT-$VERSION-manual.tar.gz"
+          
+          echo "artifact-path=artifacts/$PROJECT-$VERSION-manual.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        id: create-tag
+        run: |
+          TAG_NAME="${{ needs.validate-inputs.outputs.tag-name }}"
+          PROJECT="${{ github.event.inputs.project }}"
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          echo "🏷️ Creating Git tag: $TAG_NAME"
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create annotated tag
+          TAG_MESSAGE="Manual Release $PROJECT v$VERSION
+
+          Version Type: $VERSION_TYPE
+          Released By: ${{ github.actor }}
+          Release Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          This is a manual release created using GitHub Actions workflow dispatch."
+          
+          git tag -a "$TAG_NAME" -m "$TAG_MESSAGE"
+          
+          echo "✅ Tag $TAG_NAME created successfully"
+          
+          # Push the tag
+          echo "📤 Pushing tag to repository..."
+          git push origin "$TAG_NAME"
+          
+          echo "✅ Tag $TAG_NAME pushed successfully"
+
+      - name: Create GitHub Release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate-inputs.outputs.tag-name }}
+          name: "${{ github.event.inputs.project }} v${{ github.event.inputs.version }} (Manual)"
+          body_path: ${{ steps.release-notes.outputs.release-notes-file }}
+          files: ${{ steps.build-artifacts.outputs.artifact-path }}
+          draft: false
+          prerelease: false
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Manual release summary
+        run: |
+          PROJECT="${{ github.event.inputs.project }}"
+          VERSION="${{ github.event.inputs.version }}"
+          TAG_NAME="${{ needs.validate-inputs.outputs.tag-name }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          echo "## 🎯 Manual Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** $PROJECT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Type:** $VERSION_TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** $TAG_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **Released By:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL:** ${{ steps.create-release.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+                    
+          echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Manual release archive: ${{ steps.build-artifacts.outputs.artifact-path }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Actions Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Input validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Project build and test" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Release notes generation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Artifact creation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Git tag creation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub release creation" >> $GITHUB_STEP_SUMMARY
