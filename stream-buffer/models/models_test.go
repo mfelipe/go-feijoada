@@ -126,23 +126,23 @@ func TestMessage_FromRedisValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &Message{}
+			var m Message
 
 			if tt.expectPanic {
 				assert.Panics(t, func() {
-					m.FromRedisValue(tt.args.v)
+					MessageFromRedisValue(tt.args.v)
 				})
 				return
 			}
 
-			m.FromRedisValue(tt.args.v)
+			m = MessageFromRedisValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
 			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
-			assert.Equal(t, tt.expected, *m)
+			assert.Equal(t, tt.expected, m)
 
 			err := validate.Struct(m)
 			if tt.isValid {
@@ -238,16 +238,14 @@ func TestMessage_FromValkeyValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &Message{}
-
-			m.FromValkeyValue(tt.args.v)
+			m := MessageFromValkeyValue(tt.args.v)
 
 			// For test cases without timestamp, we need to copy the auto-generated timestamp
 			if _, exists := tt.args.v[timestampFieldName]; !exists {
 				tt.expected.Timestamp = m.Timestamp
 			}
 
-			assert.Equal(t, tt.expected, *m)
+			assert.Equal(t, tt.expected, m)
 
 			err := validate.Struct(m)
 			if tt.isValid {

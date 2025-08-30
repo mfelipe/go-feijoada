@@ -26,14 +26,14 @@ type Message struct {
 	Data      json.RawMessage `json:"data" validate:"required,json"`
 }
 
-func (m *Message) MarshalZerologObject(e *zerolog.Event) {
+func (m Message) MarshalZerologObject(e *zerolog.Event) {
 	e.Str(originFieldName, m.Origin).
 		Str(schemaFieldName, m.SchemaURI).
 		Time(timestampFieldName, m.Timestamp).
 		RawJSON(dataFieldName, m.Data)
 }
 
-func (m *Message) FromRedisValue(v map[string]any) {
+func MessageFromRedisValue(v map[string]any) Message {
 	f := func(field string) string {
 		value, ok := v[field]
 		if !ok {
@@ -41,22 +41,31 @@ func (m *Message) FromRedisValue(v map[string]any) {
 		}
 		return value.(string)
 	}
-	m.Data = json.RawMessage(f(dataFieldName))
-	m.Origin = f(originFieldName)
-	m.SchemaURI = f(schemaFieldName)
+	m := Message{
+		Origin:    f(originFieldName),
+		SchemaURI: f(schemaFieldName),
+		Data:      json.RawMessage(f(dataFieldName)),
+	}
 
 	ts := f(timestampFieldName)
 	m.Timestamp, _ = time.Parse(defaultTSFormat, ts)
+
+	return m
 }
 
-func (m *Message) FromValkeyValue(v map[string]string) {
-	m.Data = json.RawMessage(v[dataFieldName])
-	m.Origin = v[originFieldName]
-	m.SchemaURI = v[schemaFieldName]
+func MessageFromValkeyValue(v map[string]string) Message {
+	m := Message{
+		Origin:    v[originFieldName],
+		SchemaURI: v[schemaFieldName],
+		Data:      json.RawMessage(v[dataFieldName]),
+	}
+
 	m.Timestamp, _ = time.Parse(defaultTSFormat, v[timestampFieldName])
+
+	return m
 }
 
-func (m *Message) ToValue() []string {
+func (m Message) ToValue() []string {
 	return []string{
 		originFieldName, m.Origin,
 		schemaFieldName, m.SchemaURI,
@@ -65,7 +74,7 @@ func (m *Message) ToValue() []string {
 	}
 }
 
-func (m *Message) Iter() iter.Seq2[string, string] {
+func (m Message) Iter() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		for i, v := range map[string]string{
 			originFieldName:    m.Origin,

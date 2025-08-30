@@ -115,6 +115,7 @@ func TestStreamIntegration(t *testing.T) {
 	streamCfg := config.Stream{
 		Name:      "test-stream",
 		Group:     "test-group",
+		Consumer:  "test-consumer",
 		ReadCount: 100,
 		Block:     time.Second,
 	}

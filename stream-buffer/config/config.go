@@ -19,6 +19,7 @@ type Server struct {
 type Stream struct {
 	Name      string        `json:"name" koanf:"name,required"`
 	Group     string        `json:"group" koanf:"group,required"`
+	Consumer  string        `json:"consumer" koanf:"consumer,required"`
 	ReadCount int64         `json:"readCount" koanf:"readCount,required,gt=10"`
 	Block     time.Duration `json:"block" koanf:"block,required,gte=10000000"`
 }

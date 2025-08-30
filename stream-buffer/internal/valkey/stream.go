@@ -9,40 +9,53 @@ import (
 	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
 
-//goland:noinspection GoExportedFuncWithUnexportedType
-func New(serverCfg config.Server, streamCfg config.Stream) *stream {
-	opts := valkey.MustParseURL(serverCfg.Address)
-	opts.Username = serverCfg.Username
-	opts.Password = serverCfg.Password
-	opts.ClientName = serverCfg.ClientName
+// client interface for mocking
+type client interface {
+	Do(ctx context.Context, cmd valkey.Completed) valkey.ValkeyResult
+	B() valkey.Builder
+}
 
-	client, err := valkey.NewClient(opts)
-	if err != nil {
-		panic(err)
+//goland:noinspection GoExportedFuncWithUnexportedType
+func New(serverCfg config.Server, streamCfg config.Stream, opts ...Option) *stream {
+	s := stream{
+		cfg: streamCfg,
+	}
+
+	for _, opt := range opts {
+		opt(&s)
+	}
+
+	if s.cli == nil {
+		vopts := valkey.MustParseURL(serverCfg.Address)
+		vopts.Username = serverCfg.Username
+		vopts.Password = serverCfg.Password
+		vopts.ClientName = serverCfg.ClientName
+
+		cli, err := valkey.NewClient(vopts)
+		if err != nil {
+			panic(err)
+		}
+
+		s.cli = cli
 	}
 
 	// create stream and consumer group if not exists
-	client.Do(context.Background(), client.B().XgroupCreate().Key(streamCfg.Name).Group(streamCfg.Group).Id("0").Mkstream().Build())
+	s.cli.Do(context.Background(), s.cli.B().XgroupCreate().Key(streamCfg.Name).Group(streamCfg.Group).Id("0").Mkstream().Build())
 
-	return &stream{
-		cfg:          streamCfg,
-		consumerName: serverCfg.ClientName,
-		client:       client,
-	}
+	return &s
 }
 
 type stream struct {
-	cfg          config.Stream
-	client       valkey.Client
-	consumerName string
+	cfg config.Stream
+	cli client
 }
 
 func (s *stream) Add(ctx context.Context, message models.Message) error {
-	return s.client.Do(ctx, s.client.B().Xadd().Key(s.cfg.Name).Nomkstream().Id("*").FieldValue().FieldValueIter(message.Iter()).Build()).Error()
+	return s.cli.Do(ctx, s.cli.B().Xadd().Key(s.cfg.Name).Nomkstream().Id("*").FieldValue().FieldValueIter(message.Iter()).Build()).Error()
 }
 
 func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, error) {
-	resp := s.client.Do(ctx, s.client.B().Xreadgroup().Group(s.cfg.Group, s.consumerName).Block(s.cfg.Block.Milliseconds()).Streams().Key(s.cfg.Name, s.cfg.Name).Id(">", "0").Build())
+	resp := s.cli.Do(ctx, s.cli.B().Xreadgroup().Group(s.cfg.Group, s.cfg.Consumer).Block(s.cfg.Block.Milliseconds()).Streams().Key(s.cfg.Name, s.cfg.Name).Id(">", "0").Build())
 	if resp.Error() != nil {
 		return nil, resp.Error()
 	}
@@ -55,9 +68,7 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 	messageMap := make(map[string]models.Message)
 	for _, entries := range entriesArrayMap {
 		for _, entry := range entries {
-			var m = &models.Message{}
-			m.FromValkeyValue(entry.FieldValues)
-			messageMap[entry.ID] = *m
+			messageMap[entry.ID] = models.MessageFromValkeyValue(entry.FieldValues)
 		}
 	}
 
@@ -65,9 +76,9 @@ func (s *stream) ReadGroup(ctx context.Context) (map[string]models.Message, erro
 }
 
 func (s *stream) Ack(ctx context.Context, ids ...string) error {
-	return s.client.Do(ctx, s.client.B().Xack().Key(s.cfg.Name).Group(s.cfg.Group).Id(ids...).Build()).Error()
+	return s.cli.Do(ctx, s.cli.B().Xack().Key(s.cfg.Name).Group(s.cfg.Group).Id(ids...).Build()).Error()
 }
 
 func (s *stream) Delete(ctx context.Context, ids ...string) error {
-	return s.client.Do(ctx, s.client.B().Xdel().Key(s.cfg.Name).Id(ids...).Build()).Error()
+	return s.cli.Do(ctx, s.cli.B().Xdel().Key(s.cfg.Name).Id(ids...).Build()).Error()
 }
