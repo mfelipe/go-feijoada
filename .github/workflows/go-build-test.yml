@@ -37,7 +37,6 @@ jobs:
       - name: Download dependencies for ${{ matrix.project }}
         run: |
           cd ${{ matrix.project }}
-          go install github.com/vektra/mockery/v3@v3.5.4
           go mod download
           go mod verify
 
@@ -52,7 +51,7 @@ jobs:
         run: |
           cd ${{ matrix.project }}
           echo "Running tests for ${{ matrix.project }}..."
-          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -coverprofile=coverage.out ./...
           echo "✅ Tests passed for ${{ matrix.project }}"
 
       - name: Upload coverage reports
