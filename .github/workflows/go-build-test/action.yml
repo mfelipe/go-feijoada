@@ -7,7 +7,7 @@ jobs:
   matrix-definition:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ matrix-definition.steps.set-matrix.outputs.matrix }}
+      matrix: ${{ jobs.matrix-definition.steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
         run: echo "matrix={\"include\":[{\"project\":\"utils\"},{\"project\":\"schemas\"}]}" >> $GITHUB_OUTPUT
@@ -18,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
-      matrix: ${{ fromJSON(needs.matrix-definition.outputs.matrix) }}
+      matrix: ${{ fromJSON(jobs.matrix-definition.outputs.matrix) }}
     steps:
-      - name: Download dependencies for ${{ build-and-test.matrix.project }}
+      - name: Download dependencies for ${{ jobs.build-and-test.matrix.project }}
         run: |
-          cd ${{ matrix.project }}
+          cd ${{ jobs.build-and-test.matrix.project }}
           go mod download
           go mod verify
 
