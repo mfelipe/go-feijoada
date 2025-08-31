@@ -31,4 +31,4 @@ jobs:
             kafka-producer/go.sum
 
       - name: Run build and test
-        uses: ./.github/workflows/go-build-test.yml
+        uses: ./.github/workflows/go-build-test.yml@main
