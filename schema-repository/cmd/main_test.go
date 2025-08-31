@@ -68,14 +68,11 @@ func setupTestContext() (*testContext, error) {
 	}
 
 	// Overkill for experimentation
-	run := make(chan error)
-	startTimeout := make(<-chan time.Time)
+	run := make(chan error, 1)
 	go func() {
 		run = startServer()
 	}()
-	go func() {
-		startTimeout = time.After(20 * time.Second)
-	}()
+	timeoutTimer := time.NewTimer(20 * time.Second)
 
 	// TODO: Get from config
 	healthCheckURL := baseUrl + hcconfig.DefaultConfig().HealthPath
@@ -84,7 +81,7 @@ func setupTestContext() (*testContext, error) {
 		select {
 		case <-run:
 			return tc, errors.New("server exited too soon")
-		case <-startTimeout:
+		case <-timeoutTimer.C:
 			return tc, errors.New("server start timed out")
 		case <-time.After(time.Second):
 			resp, err := http.Get(healthCheckURL)

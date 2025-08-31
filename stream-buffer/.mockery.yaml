@@ -1,0 +1,10 @@
+structname: '{{.Mock}}{{.InterfaceName | camelcase | firstUpper}}'
+template: testify
+packages:
+  github.com/mfelipe/go-feijoada/stream-buffer/internal/redis:
+    interfaces:
+      client:
+  github.com/mfelipe/go-feijoada/stream-buffer/internal/valkey:
+    interfaces:
+      client:
+      result:
