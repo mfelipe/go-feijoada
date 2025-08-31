@@ -68,8 +68,9 @@ func setupTestContext() (*testContext, error) {
 	}
 
 	// Overkill for experimentation
-	run := make(chan error)
-	startTimeout := make(<-chan time.Time)
+	var run chan error
+	var startTimeout <-chan time.Time
+
 	go func() {
 		run = startServer()
 	}()
