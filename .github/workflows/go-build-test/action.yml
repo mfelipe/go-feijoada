@@ -3,7 +3,7 @@ name: Go Build and Test
 on:
   workflow_call:
     inputs:
-      matrix:
+      projects:
         description: "Project Matrix"
         required: true
         type: string
@@ -12,9 +12,11 @@ jobs:
   # Build and test validation for all pushes and PRs
   build-and-test:
     runs-on: ubuntu-latest
+    with:
+      projects: ${{ inputs.projects }}
     strategy:
       fail-fast: true
-      matrix: ${{ fromJSON(inputs.matrix) }}
+      matrix: ${{ fromJSON(projects) }}
     steps:
       - name: Download dependencies for ${{ matrix.project }}
         run: |

@@ -10,10 +10,10 @@ jobs:
   matrix-definition:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      projects: ${{ steps.set-matrix.outputs.projects }}
     steps:
       - id: set-matrix
-        run: echo "matrix={\"include\":[{\"project\":\"utils\"},{\"project\":\"schemas\"}]}" >> $GITHUB_OUTPUT
+        run: echo "projects={\"include\":[{\"project\":\"utils\"},{\"project\":\"schemas\"}]}" >> $GITHUB_OUTPUT
 
   # Setup go and cache modules for all projects
   setup-go:
@@ -41,5 +41,5 @@ jobs:
 
       - name: Run build and test
         with:
-          matrix: ${{ needs.matrix-definition.outputs.matrix }}
+          projects: ${{ needs.matrix-definition.outputs.projects }}
         uses: ./.github/workflows/go-build-test
