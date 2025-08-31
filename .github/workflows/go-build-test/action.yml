@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
-      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.matrix-definition.outputs.matrix) }}
     steps:
       - name: Download dependencies for ${{ matrix.project }}
         run: |
