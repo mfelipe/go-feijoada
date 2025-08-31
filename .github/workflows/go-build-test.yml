@@ -7,14 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build and test validation for all pushes and PRs
-  build-and-test:
+  # Setup go and cache modules for all projects
+  setup-go:
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -34,16 +30,15 @@ jobs:
             kafka-consumer/go.sum
             kafka-producer/go.sum
 
-#      - name: Cache Go modules for ${{ matrix.project }}
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ${{ matrix.project }}/go.sum
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ matrix.project }}-${{ hashFiles(format('{0}/go.sum', matrix.project)) }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-${{ matrix.project }}-
-
+  # Build and test validation for all pushes and PRs
+  build-and-test:
+    needs: setup-go
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
+    steps:
       - name: Download dependencies for ${{ matrix.project }}
         run: |
           cd ${{ matrix.project }}
