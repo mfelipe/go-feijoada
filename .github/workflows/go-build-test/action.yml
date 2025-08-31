@@ -11,6 +11,8 @@ jobs:
       fail-fast: true
       matrix:
         project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
+      with:
+        target: ${{ matrix.project }}
     steps:
       - name: Download dependencies for ${{ matrix.project }}
         run: |
