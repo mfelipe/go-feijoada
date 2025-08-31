@@ -2,16 +2,16 @@ name: Go Build and Test
 
 on:
   workflow_call:
+    inputs:
+      matrix:
+        description: "Project Matrix"
+        required: true
+        type: string
 
 jobs:
   # Build and test validation for all pushes and PRs
   build-and-test:
     runs-on: ubuntu-latest
-    inputs:
-      matrix:
-        description: 'Matrix of projects to build and test'
-        required: true
-        type: json
     strategy:
       fail-fast: true
       matrix: ${{ fromJSON(inputs.matrix) }}
