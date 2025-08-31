@@ -4,25 +4,21 @@ on:
   workflow_call:
 
 jobs:
-  matrix-definition:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ jobs.matrix-definition.steps.set-matrix.outputs.matrix }}
-    steps:
-      - id: set-matrix
-        run: echo "matrix={\"include\":[{\"project\":\"utils\"},{\"project\":\"schemas\"}]}" >> $GITHUB_OUTPUT
-
   # Build and test validation for all pushes and PRs
   build-and-test:
-    needs: matrix-definition
     runs-on: ubuntu-latest
+    inputs:
+      matrix:
+        description: 'Matrix of projects to build and test'
+        required: true
+        type: json
     strategy:
       fail-fast: true
-      matrix: ${{ fromJSON(jobs.matrix-definition.outputs.matrix) }}
+      matrix: ${{ fromJSON(inputs.matrix) }}
     steps:
-      - name: Download dependencies for ${{ jobs.build-and-test.matrix.project }}
+      - name: Download dependencies for ${{ matrix.project }}
         run: |
-          cd ${{ jobs.build-and-test.matrix.project }}
+          cd ${{ matrix.project }}
           go mod download
           go mod verify
 
