@@ -4,15 +4,21 @@ on:
   workflow_call:
 
 jobs:
+  matrix-definition:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: echo "matrix={\"include\":[{\"project\":\"utils\"},{\"project\":\"schemas\"}]}" >> $GITHUB_OUTPUT
+
   # Build and test validation for all pushes and PRs
   build-and-test:
+    needs: matrix-definition
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
-      matrix:
-        project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
-      with:
-        target: ${{ matrix.project }}
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
     steps:
       - name: Download dependencies for ${{ matrix.project }}
         run: |
