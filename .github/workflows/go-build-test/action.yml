@@ -3,8 +3,7 @@ name: Go Build and Test
 on:
   workflow_call:
     inputs:
-      projects:
-        description: "Project Matrix"
+      project:
         required: true
         type: string
 
@@ -12,35 +11,30 @@ jobs:
   # Build and test validation for all pushes and PRs
   build-and-test:
     runs-on: ubuntu-latest
-    with:
-      projects: ${{ inputs.projects }}
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJSON(projects) }}
     steps:
-      - name: Download dependencies for ${{ matrix.project }}
+      - name: Download dependencies for ${{ inputs.project }}
         run: |
-          cd ${{ matrix.project }}
+          cd ${{ inputs.project }}
           go mod download
           go mod verify
 
-      - name: Build ${{ matrix.project }}
+      - name: Build ${{ inputs.project }}
         run: |
-          cd ${{ matrix.project }}
-          echo "Building ${{ matrix.project }}..."
+          cd ${{ inputs.project }}
+          echo "Building ${{ inputs.project }}..."
           go build -v ./...
-          echo "✅ Build successful for ${{ matrix.project }}"
+          echo "✅ Build successful for ${{ inputs.project }}"
 
-      - name: Run tests for ${{ matrix.project }}
+      - name: Run tests for ${{ inputs.project }}
         run: |
-          cd ${{ matrix.project }}
-          echo "Running tests for ${{ matrix.project }}..."
+          cd ${{ inputs.project }}
+          echo "Running tests for ${{ inputs.project }}..."
           go test -v -coverprofile=coverage.out ./...
-          echo "✅ Tests passed for ${{ matrix.project }}"
+          echo "✅ Tests passed for ${{ inputs.project }}"
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.project }}
-          path: ${{ matrix.project }}/coverage.out
+          name: coverage-${{ inputs.project }}
+          path: ${{ inputs.project }}/coverage.out
           retention-days: 7
