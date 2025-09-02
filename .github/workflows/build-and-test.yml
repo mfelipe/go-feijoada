@@ -1,0 +1,53 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Build and test validation for all pushes and PRs
+  build-and-test:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'utils/go.mod'
+          check-latest: true
+          cache-dependency-path: |
+            .../go.sum
+      - name: Download dependencies for ${{ matrix.project }}
+        run: |
+          cd ${{ matrix.project }}
+          go mod download
+          go mod verify
+
+      - name: Build ${{ matrix.project }}
+        run: |
+          cd ${{ matrix.project }}
+          echo "Building ${{ matrix.project }}..."
+          go build -v ./...
+          echo "✅ Build successful for ${{ matrix.project }}"
+
+      - name: Run tests for ${{ matrix.project }}
+        run: |
+          cd ${{ matrix.project }}
+          echo "Running tests for ${{ matrix.project }}..."
+          go test -v -coverprofile=coverage.out ./...
+          echo "✅ Tests passed for ${{ matrix.project }}"
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.project }}
+          path: ${{ matrix.project }}/coverage.out
+          retention-days: 7
