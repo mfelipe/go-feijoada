@@ -31,6 +31,4 @@ jobs:
             kafka-producer/go.sum
 
       - name: Run build and test
-        with:
-          project: ${{ needs.matrix-definition.outputs.projects }}
-        uses: ./.github/workflows/go-build-test
+        uses: ./.github/workflows/matrix
