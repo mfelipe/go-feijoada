@@ -22,9 +22,18 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'utils/go.mod'
-          check-latest: true
-          cache-dependency-path: |
-            .../go.sum
+          cache: false
+
+      - name: Setup Golang caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Download dependencies for ${{ matrix.project }}
         run: |
           cd ${{ matrix.project }}
