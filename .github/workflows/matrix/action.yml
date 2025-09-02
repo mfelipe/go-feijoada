@@ -5,13 +5,10 @@ on:
 
 jobs:
   matrix-definition:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
         project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
-    steps:
-      - name: Running build and tests for ${{ matrix.project }}
-        with:
-          project: ${{ matrix.project }}
-        uses: ./.github/workflows/go-build-test
+    uses: ./.github/workflows/go-build-test
+    with:
+      project: ${{ matrix.project }}
