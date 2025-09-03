@@ -1,0 +1,6 @@
+structname: '{{.Mock}}{{.InterfaceName | camelcase | firstUpper}}'
+template: testify
+packages:
+  github.com/mfelipe/go-feijoada/stream-consumer/internal/dynamo:
+    interfaces:
+      client:
