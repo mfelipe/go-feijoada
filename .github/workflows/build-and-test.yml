@@ -1,17 +1,30 @@
-name: Go Build and Test
+name: Build and Test
 
 on:
-  workflow_call:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   # Build and test validation for all pushes and PRs
   build-and-test:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
       matrix:
         project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
     steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache-dependency-path: "${{ matrix.project }}/go.sum"
+
       - name: Download dependencies for ${{ matrix.project }}
         run: |
           cd ${{ matrix.project }}
