@@ -1,14 +1,17 @@
 package dynamo
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/mfelipe/go-feijoada/stream-buffer/models"
 	"github.com/mfelipe/go-feijoada/stream-consumer/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNew(t *testing.T) {
@@ -52,37 +55,110 @@ func TestMessageToItem(t *testing.T) {
 	assert.Equal(t, &types.AttributeValueMemberS{Value: timestamp.Format(time.RFC3339)}, item["timestamp"])
 }
 
-func TestClient_BatchWrite_Structure(t *testing.T) {
-	// Test the structure without actual DynamoDB calls
-	client := &Client{
+func setupTestClient(t *testing.T, setupFunc func(*mockClient)) *Client {
+	mCli := newMockClient(t)
+	setupFunc(mCli)
+
+	c := &Client{
 		tableName: "test-table",
+		db:        mCli,
 	}
 
-	messages := map[string]models.Message{
-		"msg1": {
-			Origin:    "kafka",
-			SchemaURI: "http://schema-repo/user/1.0.0",
-			Data:      json.RawMessage(`{"id": "1", "name": "John"}`),
-			Timestamp: time.Now(),
+	return c
+}
+
+func TestClient_BatchWrite(t *testing.T) {
+	tests := []struct {
+		name                string
+		messages            map[string]models.Message
+		setupMock           func(*mockClient)
+		expectedUnpersisted []string
+		expectError         bool
+		errorMsg            string
+	}{
+		{
+			name: "successful batch write",
+			messages: map[string]models.Message{
+				"1": {
+					Origin:    "test-origin",
+					SchemaURI: "test-schema",
+				},
+			},
+			setupMock: func(m *mockClient) {
+				m.EXPECT().BatchWriteItem(mock.Anything, mock.MatchedBy(func(input *dynamodb.BatchWriteItemInput) bool {
+					if reqs, ok := input.RequestItems["test-table"]; ok {
+						return len(reqs) == 1
+					}
+					return false
+				})).Return(&dynamodb.BatchWriteItemOutput{
+					UnprocessedItems: map[string][]types.WriteRequest{},
+				}, nil)
+			},
+			expectedUnpersisted: []string{},
+			expectError:         false,
+		},
+		{
+			name: "partial failure in batch write",
+			messages: map[string]models.Message{
+				"1": {
+					Origin:    "test-origin",
+					SchemaURI: "test-schema",
+				},
+				"2": {
+					Origin:    "test-origin-2",
+					SchemaURI: "test-schema-2",
+				},
+			},
+			setupMock: func(m *mockClient) {
+				m.EXPECT().BatchWriteItem(mock.Anything, mock.Anything).Return(&dynamodb.BatchWriteItemOutput{
+					UnprocessedItems: map[string][]types.WriteRequest{
+						"test-table": {
+							{
+								PutRequest: &types.PutRequest{
+									Item: map[string]types.AttributeValue{
+										"id": &types.AttributeValueMemberS{Value: "2"},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			expectedUnpersisted: []string{"2"},
+			expectError:         false,
+		},
+		{
+			name: "complete failure in batch write",
+			messages: map[string]models.Message{
+				"1": {
+					Origin:    "test-origin",
+					SchemaURI: "test-schema",
+				},
+			},
+			setupMock: func(m *mockClient) {
+				m.EXPECT().BatchWriteItem(mock.Anything, mock.Anything).Return(nil, assert.AnError)
+			},
+			expectedUnpersisted: []string{"1"},
+			expectError:         true,
+			errorMsg:            assert.AnError.Error(),
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := setupTestClient(t, tt.setupMock)
 
-	// Test messageToItem function
-	for id, msg := range messages {
-		item := client.messageToItem(id, msg)
+			unpersisted, err := c.BatchWrite(context.Background(), tt.messages)
 
-		// Verify all expected attributes are present
-		assert.Contains(t, item, "id")
-		assert.Contains(t, item, "origin")
-		assert.Contains(t, item, "schemaURI")
-		assert.Contains(t, item, "data")
-		assert.Contains(t, item, "timestamp")
+			assert.ElementsMatch(t, tt.expectedUnpersisted, unpersisted)
 
-		// Verify attribute values
-		assert.Equal(t, &types.AttributeValueMemberS{Value: id}, item["id"])
-		assert.Equal(t, &types.AttributeValueMemberS{Value: msg.Origin}, item["origin"])
-		assert.Equal(t, &types.AttributeValueMemberS{Value: msg.SchemaURI}, item["schemaURI"])
-		assert.Equal(t, &types.AttributeValueMemberS{Value: string(msg.Data)}, item["data"])
-		assert.Equal(t, &types.AttributeValueMemberS{Value: msg.Timestamp.Format(time.RFC3339)}, item["timestamp"])
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }

@@ -17,8 +17,12 @@ import (
 	sccfg "github.com/mfelipe/go-feijoada/stream-consumer/config"
 )
 
+type client interface {
+	BatchWriteItem(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error)
+}
+
 type Client struct {
-	db        *dynamodb.Client
+	db        client
 	tableName string
 }
 
@@ -41,10 +45,10 @@ func New(cfg sccfg.DynamoDB) *Client {
 		o.RetryMode = aws.RetryModeAdaptive
 	})
 
-	client := dynamodb.NewFromConfig(awsCfg, options...)
+	dbClient := dynamodb.NewFromConfig(awsCfg, options...)
 
 	return &Client{
-		db:        client,
+		db:        dbClient,
 		tableName: cfg.TableName,
 	}
 }
