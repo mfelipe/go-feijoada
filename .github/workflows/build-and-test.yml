@@ -16,23 +16,14 @@ jobs:
         project: [utils, schemas, stream-buffer, stream-consumer, schema-validator, schema-repository, kafka-consumer, kafka-producer]
     steps:
       - name: Checkout code
+        id: checkout
         uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'utils/go.mod'
-          cache: false
-
-      - name: Setup Golang caches
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-golang-
+          go-version: 'stable'
+          cache-dependency-path: "${{ matrix.project }}/go.sum"
 
       - name: Download dependencies for ${{ matrix.project }}
         run: |
