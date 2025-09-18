@@ -1,6 +1,6 @@
 module github.com/mfelipe/go-feijoada/schemas
 
-go 1.24.3
+go 1.25.1
 
 replace github.com/atombender/go-jsonschema v0.20.0 => github.com/mfelipe/go-jsonschema v0.20.0-CustomTag
 

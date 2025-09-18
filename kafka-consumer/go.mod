@@ -1,6 +1,6 @@
 module github.com/mfelipe/go-feijoada/kafka-consumer
 
-go 1.24.3
+go 1.25.1
 
 replace (
 	github.com/mfelipe/go-feijoada/schema-validator => ../schema-validator
@@ -56,6 +56,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/redis/go-redis/v9 v9.11.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.11.2 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect

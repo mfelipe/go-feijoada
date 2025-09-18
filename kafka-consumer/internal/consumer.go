@@ -17,12 +17,16 @@ import (
 	sbmodels "github.com/mfelipe/go-feijoada/stream-buffer/models"
 )
 
+type Stream interface {
+	Add(ctx context.Context, message sbmodels.Message) error
+}
+
 // This implementation is based on examples from the frans-go module, more specifically the one for consuming with a
 // go routine per partition and manual batch commiting:
 // https://github.com/twmb/franz-go/blob/master/examples/goroutine_per_partition_consuming/
 
 type pconsumer struct {
-	stream    streambuffer.Stream
+	stream    Stream
 	validator schemavalidator.SchemaValidator
 	kcli      *kgo.Client
 	topic     string
@@ -40,18 +44,28 @@ type consumerKey struct {
 
 type Consumer struct {
 	cfg       config.Consumer
-	stream    streambuffer.Stream
+	stream    Stream
 	validator schemavalidator.SchemaValidator
 	kcli      *kgo.Client
 	consumers map[consumerKey]*pconsumer
 }
 
-func NewConsumer(cfg config.Consumer) *Consumer {
+func NewConsumer(cfg config.Consumer, opts ...Option) *Consumer {
 	c := &Consumer{
 		cfg:       cfg,
-		stream:    streambuffer.New(cfg.Repository),
-		validator: schemavalidator.New(cfg.SchemaValidator),
 		consumers: make(map[consumerKey]*pconsumer),
+	}
+
+	for _, o := range opts {
+		o(c)
+	}
+
+	if c.stream == nil {
+		c.stream = streambuffer.New(cfg.Repository)
+	}
+
+	if c.validator == nil {
+		c.validator = schemavalidator.New(cfg.SchemaValidator)
 	}
 
 	zlog.Info().EmbedObject(cfg.Kafka).Msg("creating kafka client...")
@@ -178,7 +192,7 @@ func (pc *pconsumer) validateMessage(_ context.Context, msg sbmodels.Message) (b
 			errors.Join(rErr, errors.New(e))
 		}
 
-		zlog.Error().Err(rErr).Str("schemaURI", msg.SchemaURI).Msg("data is not a valid schema")
+		zlog.Error().Err(rErr).Str("schemaURI", msg.SchemaURI).Msg("data is not valid according to the schema")
 	}
 	return vResult.IsValid(), nil
 }
