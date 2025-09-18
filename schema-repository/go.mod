@@ -1,6 +1,6 @@
 module github.com/mfelipe/go-feijoada/schema-repository
 
-go 1.24.3
+go 1.25.1
 
 replace github.com/mfelipe/go-feijoada/utils => ../utils
 

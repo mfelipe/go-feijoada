@@ -1,0 +1,12 @@
+go 1.25.1
+
+use (
+    ./utils
+    ./schemas
+    ./schema-validator
+    ./schema-repository
+    ./stream-buffer
+    ./stream-consumer
+    ./kafka-producer
+    ./kafka-consumer
+)
